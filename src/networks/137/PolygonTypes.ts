@@ -110,7 +110,7 @@ export interface PolygonTransactionReceipt {
 // ===== Log Structure =====
 
 export interface PolygonLog {
-  removed?: boolean;               // True if log was removed (chain reorg)
+  removed: boolean;                // True if log was removed (chain reorg)
   logIndex: string;                // Log index in block
   transactionIndex: string;        // Transaction index
   transactionHash: string;         // Transaction hash
@@ -119,6 +119,7 @@ export interface PolygonLog {
   address: string;                 // Contract address
   data: string;                    // Log data
   topics: string[];                // Indexed log topics
+  blockTimestamp: string;          // Block timestamp (Polygon-specific extension)
 }
 
 // ===== Log Filter =====
