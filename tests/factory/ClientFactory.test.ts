@@ -78,7 +78,10 @@ describe("ClientFactory - createClient", () => {
   it("should create EthereumClient for chain ID 31337 (Hardhat)", () => {
     const client = ClientFactory.createClient(31337, TEST_CONFIG);
 
-    assert.ok(client instanceof EthereumClient, "Should create EthereumClient instance for Hardhat");
+    assert.ok(
+      client instanceof EthereumClient,
+      "Should create EthereumClient instance for Hardhat",
+    );
     assert.strictEqual(client.getStrategyName(), "fallback", "Should use fallback strategy");
   });
 
@@ -192,7 +195,11 @@ describe("ClientFactory - All Networks Coverage", () => {
     for (const chainId of chainIds) {
       const client = ClientFactory.createClient(chainId, TEST_CONFIG);
       assert.ok(client, `Should create client for chain ID ${chainId}`);
-      assert.strictEqual(typeof client.getStrategyName, "function", `Client for chain ${chainId} should have getStrategyName method`);
+      assert.strictEqual(
+        typeof client.getStrategyName,
+        "function",
+        `Client for chain ${chainId} should have getStrategyName method`,
+      );
     }
   });
 
@@ -212,7 +219,10 @@ describe("ClientFactory - All Networks Coverage", () => {
 
     for (const { chainId, clientClass, name } of expectedTypes) {
       const client = ClientFactory.createClient(chainId, TEST_CONFIG);
-      assert.ok(client instanceof clientClass, `Should create ${name} client (${clientClass.name}) for chain ID ${chainId}`);
+      assert.ok(
+        client instanceof clientClass,
+        `Should create ${name} client (${clientClass.name}) for chain ID ${chainId}`,
+      );
     }
   });
 });
