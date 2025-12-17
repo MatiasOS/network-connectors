@@ -2,7 +2,13 @@ import { describe, it } from "node:test";
 import assert from "node:assert";
 import { BaseClient } from "../../src/networks/8453/BaseClient.js";
 import type { StrategyConfig } from "../../src/strategies/requestStrategy.js";
-import { validateObject, validateBlock, validateSuccessResult } from "../helpers/validators.js";
+import {
+  validateObject,
+  validateBlock,
+  validateSuccessResult,
+  validateTransaction,
+  isHexString,
+} from "../helpers/validators.js";
 
 const TEST_URLS = ["https://base.api.pocket.network", "https://base.drpc.org"];
 
@@ -57,5 +63,48 @@ describe("BaseNetworkClient - Block Methods", () => {
 
     validateSuccessResult(result);
     validateBlock(result.data);
+  });
+});
+
+describe("BaseNetworkClient - Transaction Methods", () => {
+  const config: StrategyConfig = {
+    type: "fallback",
+    rpcUrls: TEST_URLS,
+  };
+
+  it("should get transaction by hash", async () => {
+    const client = new BaseClient(config);
+
+    // Get a block with transactions
+    const blockResult = await client.getBlockByNumber("latest", false);
+    assert.ok(blockResult.data, "Should have block");
+
+    if (blockResult.data.transactions.length > 0) {
+      const txHash = blockResult.data.transactions[0];
+      const result = await client.getTransactionByHash(txHash as string);
+
+      if (result.data !== null) {
+        validateSuccessResult(result);
+        validateTransaction(result.data);
+        validateObject(result.data, [
+          "blockHash",
+          "blockNumber",
+          "chainId",
+          "from",
+          "gas",
+          "gasPrice",
+          "hash",
+          "input",
+          "nonce",
+          "to",
+          "transactionIndex",
+          "value",
+          "v",
+          "r",
+          "s",
+        ]);
+        assert.ok(isHexString((result.data as any).nonce), "Nonce should be hex");
+      }
+    }
   });
 });

@@ -194,6 +194,23 @@ describe("ArbitrumNetworkClient - Transaction Methods", () => {
       if (result.data !== null) {
         validateSuccessResult(result);
         validateTransaction(result.data);
+        validateObject(result.data, [
+          "blockHash",
+          "blockNumber",
+          "chainId",
+          "from",
+          "gas",
+          "gasPrice",
+          "hash",
+          "input",
+          "nonce",
+          "to",
+          "transactionIndex",
+          "value",
+          "v",
+          "r",
+          "s",
+        ]);
         assert.ok(isHexString((result.data as any).nonce), "Nonce should be hex");
         assert.ok(isHexString((result.data as any).chainId), "ChainId should be hex");
       }

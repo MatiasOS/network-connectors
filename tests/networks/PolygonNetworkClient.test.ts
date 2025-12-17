@@ -7,6 +7,7 @@ import {
   validateObject,
   validateBlock,
   validateSuccessResult,
+  validateTransaction,
   isHexString,
   isAddress,
 } from "../helpers/validators.js";
@@ -59,6 +60,50 @@ describe("PolygonClient - Block Methods", () => {
 
     validateSuccessResult(result);
     validateBlock(result.data);
+  });
+});
+
+describe("PolygonClient - Transaction Methods", () => {
+  const config: StrategyConfig = {
+    type: "fallback",
+    rpcUrls: TEST_URLS,
+  };
+
+  it("should get transaction by hash", async () => {
+    const client = new PolygonClient(config);
+
+    // Get a block with transactions
+    const blockResult = await client.getBlockByNumber("latest", false);
+    assert.ok(blockResult.data, "Should have block");
+
+    if (blockResult.data.transactions.length > 0) {
+      const txHash = blockResult.data.transactions[0];
+      const result = await client.getTransactionByHash(txHash as string);
+
+      if (result.data !== null) {
+        validateSuccessResult(result);
+        validateTransaction(result.data);
+        validateObject(result.data, [
+          "blockHash",
+          "blockNumber",
+          "chainId",
+          "from",
+          "gas",
+          "gasPrice",
+          "hash",
+          "input",
+          "nonce",
+          "to",
+          "transactionIndex",
+          "value",
+          "v",
+          "r",
+          "s",
+        ]);
+        assert.ok(isHexString((result.data as any).nonce), "Nonce should be hex");
+        assert.ok(isHexString((result.data as any).chainId), "ChainId should be hex");
+      }
+    }
   });
 });
 

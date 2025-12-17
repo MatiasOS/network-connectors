@@ -274,10 +274,25 @@ describe("EthereumClient - Transaction Methods", () => {
       const txHash = blockResult.data.transactions[0];
       const result = await client.getTransactionByHash(txHash as string);
 
-      if (result.data !== null) {
-        validateSuccessResult(result);
-        validateTransaction(result.data);
-      }
+      validateSuccessResult(result);
+      validateTransaction(result.data);
+      validateObject(result.data, [
+        "blockHash",
+        "blockNumber",
+        "chainId",
+        "from",
+        "gas",
+        "gasPrice",
+        "hash",
+        "input",
+        "nonce",
+        "to",
+        "transactionIndex",
+        "value",
+        "v",
+        "r",
+        "s",
+      ]);
     }
   });
 
