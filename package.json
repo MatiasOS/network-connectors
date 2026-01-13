@@ -35,5 +35,8 @@
       "import": "./dist/index.js",
       "types": "./dist/types/index.d.ts"
     }
+  },
+    "publishConfig": {
+    "access": "public"
   }
 }
