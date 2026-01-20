@@ -41,7 +41,8 @@ This file provides structured context for AI assistants to understand the @opens
 │   │   ├── 31337/               # Hardhat (local)
 │   │   ├── 42161/               # Arbitrum One
 │   │   ├── 677868/              # Aztec
-│   │   └── 11155111/            # Sepolia Testnet
+│   │   ├── 11155111/            # Sepolia Testnet
+│   │   └── bitcoin/             # Bitcoin (CAIP-2: bip122:*)
 │   ├── factory/                 # Client instantiation
 │   │   └── ClientRegistry.ts    # Chain ID to client mapping
 │   ├── NetworkClient.ts         # Base network client
@@ -284,6 +285,10 @@ static createStrategy(config: StrategyConfig): RequestStrategy {
 | Aztec | 677868 | `AztecClient` | Custom node_*/nodeAdmin_* methods (non-EVM) |
 | Hardhat | 31337 | `EthereumClient` | Local development network |
 | Sepolia Testnet | 11155111 | `SepoliaClient` | Ethereum-compatible testnet |
+| Bitcoin Mainnet | `bip122:000000000019d6689c085ae165831e93` | `BitcoinClient` | Full Bitcoin Core 28+ RPC (~115 methods) |
+| Bitcoin Testnet3 | `bip122:000000000933ea01ad0ee984209779ba` | `BitcoinClient` | Bitcoin testnet3 network |
+| Bitcoin Testnet4 | `bip122:00000000da84f2bafbbc53dee25a72ae` | `BitcoinClient` | Bitcoin testnet4 (BIP94) |
+| Bitcoin Signet | `bip122:00000008819873e925422c1ff0f99f7c` | `BitcoinClient` | Bitcoin signet (BIP325) |
 
 ### Network-Specific Method Categories
 
@@ -322,6 +327,35 @@ All Ethereum-compatible networks include:
 - Contract queries: `getContractClass()`, `getContractInstance()`
 - State: `getPublicLogs()`, `worldStateSyncStatus()`
 - Validators and node admin operations
+
+**Bitcoin** ([src/networks/bitcoin/BitcoinClient.ts](src/networks/bitcoin/BitcoinClient.ts)):
+
+Bitcoin uses CAIP-2/BIP122 chain IDs instead of numeric EVM chain IDs. Import constants for type-safe usage:
+
+```typescript
+import { BITCOIN_MAINNET, BITCOIN_TESTNET3, BITCOIN_TESTNET4, BITCOIN_SIGNET } from "@openscan/network-connectors";
+```
+
+Method categories (~115 methods total, targeting Bitcoin Core v28+):
+
+- **Blockchain** (~15): `getBestBlockHash()`, `getBlock()`, `getBlockchainInfo()`, `getBlockCount()`, `getBlockHash()`, `getBlockHeader()`, `getBlockStats()`, `getChainTips()`, `getChainTxStats()`, `getDifficulty()`, `getTxOut()`, `getTxOutSetInfo()`, `verifyChain()`, `scanTxOutSet()`, `getBlockFilter()`
+- **Mempool** (~10): `getMempoolInfo()`, `getRawMempool()`, `getMempoolEntry()`, `getMempoolAncestors()`, `getMempoolDescendants()`, `testMempoolAccept()`, `submitPackage()`, `getPrioritisedTransactions()`
+- **Raw Transactions** (~7): `getRawTransaction()`, `decodeRawTransaction()`, `decodeScript()`, `sendRawTransaction()`, `createRawTransaction()`, `combineRawTransaction()`, `signRawTransactionWithKey()`
+- **PSBT** (~8): `createPsbt()`, `decodePsbt()`, `analyzePsbt()`, `combinePsbt()`, `finalizePsbt()`, `joinPsbts()`, `convertToPsbt()`, `utxoUpdatePsbt()`
+- **Network** (~13): `getNetworkInfo()`, `getPeerInfo()`, `getConnectionCount()`, `getNetTotals()`, `getAddedNodeInfo()`, `getNodeAddresses()`, `ping()`, `addNode()`, `disconnectNode()`, `listBanned()`, `setBan()`, `clearBanned()`, `setNetworkActive()`
+- **Control** (~6): `getMemoryInfo()`, `getRpcInfo()`, `help()`, `uptime()`, `logging()`, `stop()`
+- **Utility** (~7): `validateAddress()`, `getDescriptorInfo()`, `deriveAddresses()`, `createMultisig()`, `verifyMessage()`, `signMessageWithPrivKey()`, `getIndexInfo()`
+- **Fee Estimation** (~1): `estimateSmartFee()`
+- **Mining** (~9): `getMiningInfo()`, `getNetworkHashPs()`, `getBlockTemplate()`, `submitBlock()`, `submitHeader()`, `generateToAddress()`, `generateBlock()`, `generateToDescriptor()`, `prioritiseTransaction()`
+- **Wallet** (~35): `getWalletInfo()`, `getBalances()`, `getBalance()`, `listWallets()`, `loadWallet()`, `unloadWallet()`, `createWallet()`, `getNewAddress()`, `getAddressInfo()`, `listTransactions()`, `sendToAddress()`, `sendMany()`, `listUnspent()`, `walletCreateFundedPsbt()`, `walletProcessPsbt()`, `importDescriptors()`, `signRawTransactionWithWallet()`, and more
+- **Signer** (~2): `enumerateSigners()`, `signerDisplayAddress()`
+
+Bitcoin Core v28+ specific features supported:
+
+- `createWalletDescriptor()`, `getHdKeys()` - New wallet descriptor RPCs
+- `getPrioritisedTransactions()` - New mempool inspection
+- `submitPackage()` with `maxfeerate` and `maxburnamount` params
+- Array-based `warnings` field in info responses
 
 ## Common Code Patterns
 
@@ -397,9 +431,18 @@ async call<T>(method: string, params: any[] = []): Promise<T>
 **Type-Safe Chain ID Mapping**:
 
 ```typescript
+// EVM chain IDs (numeric)
 type SupportedChainId = 1 | 10 | 56 | 97 | 137 | 8453 | 42161 | 677868 | 31337 | 11155111;
 
-type ChainIdToClient<T extends SupportedChainId> =
+// Bitcoin chain IDs (CAIP-2/BIP122 format)
+type SupportedBitcoinChainId = BitcoinChainId;  // "bip122:000000000019d6689c085ae165831e93" | ...
+
+// All supported networks
+type SupportedNetwork = SupportedChainId | SupportedBitcoinChainId;
+
+// Maps network identifier to client type
+type NetworkToClient<T extends SupportedNetwork> =
+  T extends SupportedBitcoinChainId ? BitcoinClient :
   T extends 1 | 31337 | 11155111 ? EthereumClient :
   T extends 10 ? OptimismClient :
   T extends 56 | 97 ? BNBClient :
@@ -407,20 +450,43 @@ type ChainIdToClient<T extends SupportedChainId> =
   T extends 8453 ? BaseClient :
   T extends 42161 ? ArbitrumClient :
   T extends 677868 ? AztecClient :
-  never;
+  NetworkClient;
 ```
 
-**Factory Methods**:
+**Factory Methods (Overloaded for Automatic Type Inference)**:
 
 ```typescript
-// Generic client
-static createClient(chainId: SupportedChainId, config: StrategyConfig): NetworkClient
+// Overloaded createClient - returns correct type automatically
+static createClient(chainId: 1 | 31337, config: StrategyConfig): EthereumClient;
+static createClient(chainId: 10, config: StrategyConfig): OptimismClient;
+static createClient(chainId: SupportedBitcoinChainId, config: StrategyConfig): BitcoinClient;
+// ... other overloads
+static createClient(network: SupportedNetwork, config: StrategyConfig): NetworkClient;
 
-// Type-safe client with network-specific methods
-static createTypedClient<T extends SupportedChainId>(
-  chainId: T,
+// Type-safe client with generic inference
+static createTypedClient<T extends SupportedNetwork>(
+  network: T,
   config: StrategyConfig
-): ChainIdToClient<T>
+): NetworkToClient<T>
+```
+
+**Usage Example**:
+
+```typescript
+import { ClientFactory, BITCOIN_MAINNET } from "@openscan/network-connectors";
+
+const config = { type: "fallback" as const, rpcUrls: ["https://btc-rpc.example.com"] };
+
+// Automatic type inference - no generics needed
+const btcClient = ClientFactory.createClient(BITCOIN_MAINNET, config);
+// btcClient is typed as BitcoinClient
+
+const ethClient = ClientFactory.createClient(1, config);
+// ethClient is typed as EthereumClient
+
+// All methods are fully typed
+const info = await btcClient.getBlockchainInfo();
+// info.data is BtcBlockchainInfo
 ```
 
 ## Testing Approach

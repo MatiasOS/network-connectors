@@ -4,15 +4,18 @@ TypeScript library providing unified, type-safe RPC client interfaces for multip
 
 ## Features
 
-- **Multi-Network Support**: Unified API for 10+ blockchain networks (Ethereum, Optimism, Arbitrum, Polygon, BNB, Base, Aztec, and testnets)
+- **Multi-Network Support**: Unified API for 10+ blockchain networks including EVM chains (Ethereum, Optimism, Arbitrum, Polygon, BNB, Base, Aztec) and Bitcoin
+- **Bitcoin Support**: Full Bitcoin Core v28+ RPC support with ~115 methods using CAIP-2/BIP122 chain identifiers
 - **Strategy Pattern**: Pluggable request execution strategies (Fallback for reliability, Parallel for consistency detection)
 - **Type Safety**: Strong TypeScript typing with network-specific type definitions
 - **Zero Dependencies**: Pure Node.js implementation with no external runtime dependencies
 - **ES Modules**: Native ESM support for modern JavaScript environments
-- **Factory Pattern**: Type-safe client instantiation based on chain IDs
+- **Factory Pattern**: Type-safe client instantiation based on chain IDs (numeric for EVM, CAIP-2 for Bitcoin)
 - **Inconsistency Detection**: Parallel strategy can detect RPC provider data divergence
 
 ## Supported Networks
+
+### EVM Networks
 
 | Network | Chain ID | Client Class | Special Features |
 |---------|----------|--------------|------------------|
@@ -26,6 +29,47 @@ TypeScript library providing unified, type-safe RPC client interfaces for multip
 | Aztec | 677868 | `AztecClient` | Custom node_*/nodeAdmin_* methods (non-EVM) |
 | Hardhat | 31337 | `EthereumClient` | Local development network |
 | Sepolia Testnet | 11155111 | `SepoliaClient` | Ethereum-compatible testnet |
+
+### Bitcoin Networks
+
+Bitcoin uses [CAIP-2](https://github.com/ChainAgnostic/CAIPs/blob/main/CAIPs/caip-2.md)/[BIP122](https://github.com/bitcoin/bips/blob/master/bip-0122.mediawiki) chain identifiers instead of numeric chain IDs.
+
+| Network | Chain ID (CAIP-2) | Client Class | Special Features |
+|---------|-------------------|--------------|------------------|
+| Bitcoin Mainnet | `bip122:000000000019d6689c085ae165831e93` | `BitcoinClient` | Full Bitcoin Core v28+ RPC (~115 methods) |
+| Bitcoin Testnet3 | `bip122:000000000933ea01ad0ee984209779ba` | `BitcoinClient` | Bitcoin testnet3 network |
+| Bitcoin Testnet4 | `bip122:00000000da84f2bafbbc53dee25a72ae` | `BitcoinClient` | Bitcoin testnet4 (BIP94) |
+| Bitcoin Signet | `bip122:00000008819873e925422c1ff0f99f7c` | `BitcoinClient` | Bitcoin signet (BIP325) |
+
+#### Bitcoin Chain ID Constants
+
+For convenience, use the exported constants instead of raw chain ID strings:
+
+```typescript
+import {
+  BITCOIN_MAINNET,
+  BITCOIN_TESTNET3,
+  BITCOIN_TESTNET4,
+  BITCOIN_SIGNET
+} from "@openscan/network-connectors";
+
+// BITCOIN_MAINNET = "bip122:000000000019d6689c085ae165831e93"
+```
+
+#### Bitcoin Method Categories (~115 methods)
+
+| Category | Methods | Description |
+|----------|---------|-------------|
+| Blockchain | ~15 | `getBlockchainInfo`, `getBlock`, `getBlockHash`, `getBlockHeader`, `getBlockStats`, `getChainTips`, `getDifficulty`, etc. |
+| Mempool | ~10 | `getMempoolInfo`, `getRawMempool`, `getMempoolEntry`, `testMempoolAccept`, `submitPackage`, etc. |
+| Raw Transactions | ~7 | `getRawTransaction`, `decodeRawTransaction`, `decodeScript`, `sendRawTransaction`, `createRawTransaction`, etc. |
+| PSBT | ~8 | `createPsbt`, `decodePsbt`, `analyzePsbt`, `combinePsbt`, `finalizePsbt`, `joinPsbts`, etc. |
+| Network | ~13 | `getNetworkInfo`, `getPeerInfo`, `getConnectionCount`, `getNetTotals`, `ping`, `addNode`, etc. |
+| Fee Estimation | ~1 | `estimateSmartFee` with economical/conservative modes |
+| Utility | ~7 | `validateAddress`, `getDescriptorInfo`, `deriveAddresses`, `createMultisig`, `verifyMessage`, etc. |
+| Mining | ~9 | `getMiningInfo`, `getNetworkHashPs`, `getBlockTemplate`, `submitBlock`, `generateToAddress`, etc. |
+| Wallet | ~35 | `getWalletInfo`, `getBalances`, `listWallets`, `sendToAddress`, `listUnspent`, `importDescriptors`, etc. |
+| Control | ~6 | `getMemoryInfo`, `getRpcInfo`, `help`, `uptime`, `logging`, `stop` |
 
 ## Project Structure
 
@@ -100,8 +144,20 @@ Strategies can be configured at client creation or switched dynamically using `u
 The **ClientFactory** provides type-safe client instantiation based on chain IDs:
 
 ```typescript
-// Generic client
-const client = ClientFactory.createClient(chainId, config);
+import { ClientFactory, BITCOIN_MAINNET } from "@openscan/network-connectors";
+
+const config = {
+  type: "fallback" as const,
+  rpcUrls: ["https://rpc.example.com"]
+};
+
+// EVM client (numeric chain ID)
+const ethClient = ClientFactory.createClient(1, config);
+// ethClient is typed as EthereumClient
+
+// Bitcoin client (CAIP-2 chain ID)
+const btcClient = ClientFactory.createClient(BITCOIN_MAINNET, config);
+// btcClient is typed as BitcoinClient
 
 // Type-safe client with network-specific methods
 const arbClient = ClientFactory.createTypedClient(42161, config);
