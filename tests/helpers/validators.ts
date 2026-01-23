@@ -147,6 +147,26 @@ export function validateFallbackMetadata(result: any, expectedResponses?: number
 }
 
 /**
+ * Validates race strategy metadata
+ */
+export function validateRaceMetadata(result: any, minResponses = 1): void {
+  assert.ok(result.metadata, "Should have metadata");
+  assert.strictEqual(result.metadata.strategy, "race", "Should be race strategy");
+  assert.ok(typeof result.metadata.timestamp === "number", "Should have timestamp");
+  assert.ok(result.metadata.timestamp > 0, "Timestamp should be positive");
+  assert.ok(Array.isArray(result.metadata.responses), "Should have responses array");
+  assert.ok(
+    result.metadata.responses.length >= minResponses,
+    `Should have at least ${minResponses} response(s)`,
+  );
+  assert.strictEqual(
+    result.metadata.hasInconsistencies,
+    false,
+    "Race strategy should not have inconsistencies (it doesn't compare responses)",
+  );
+}
+
+/**
  * Validates individual response details in strategy results
  * @param responses - Array of RPCProviderResponse objects
  * @param requireHash - Whether to require hash field on success (true for parallel, false for fallback)
