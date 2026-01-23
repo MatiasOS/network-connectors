@@ -6,7 +6,7 @@ TypeScript library providing unified, type-safe RPC client interfaces for multip
 
 - **Multi-Network Support**: Unified API for 10+ blockchain networks including EVM chains (Ethereum, Optimism, Arbitrum, Polygon, BNB, Base, Aztec) and Bitcoin
 - **Bitcoin Support**: Full Bitcoin Core v28+ RPC support with ~115 methods using CAIP-2/BIP122 chain identifiers
-- **Strategy Pattern**: Pluggable request execution strategies (Fallback for reliability, Parallel for consistency detection)
+- **Strategy Pattern**: Pluggable request execution strategies (Fallback for reliability, Parallel for consistency detection, Race for minimum latency)
 - **Type Safety**: Strong TypeScript typing with network-specific type definitions
 - **Zero Dependencies**: Pure Node.js implementation with no external runtime dependencies
 - **ES Modules**: Native ESM support for modern JavaScript environments
@@ -76,7 +76,7 @@ import {
 ```
 @openscan/network-connectors/
 ├── src/
-│   ├── strategies/              # Request execution strategies (Fallback, Parallel)
+│   ├── strategies/              # Request execution strategies (Fallback, Parallel, Race)
 │   ├── networks/                # Network-specific clients organized by chain ID
 │   ├── factory/                 # Client instantiation and chain ID mapping
 │   ├── NetworkClient.ts         # Base network client (abstract class)
@@ -102,6 +102,7 @@ import {
 - **src/strategies/**: Implements the Strategy pattern for RPC request execution
   - `FallbackStrategy`: Sequential execution with early exit on success
   - `ParallelStrategy`: Concurrent execution with inconsistency detection
+  - `RaceStrategy`: Concurrent execution returning first successful response
   - `StrategyFactory`: Creates appropriate strategy based on configuration
 
 - **src/networks/**: Network-specific client implementations (one directory per chain ID)
@@ -136,6 +137,13 @@ The library uses the **Strategy Pattern** to provide flexible RPC request execut
   - Detects data inconsistencies using response hashing
   - Returns comprehensive metadata for debugging
   - Best for detecting provider divergence
+
+- **RaceStrategy**: Executes all RPC providers concurrently, returns first success
+  - Uses `Promise.any` to return as soon as any provider succeeds
+  - Minimizes latency by using the fastest responding provider
+  - Only fails if ALL providers fail
+  - Includes metadata with winning response and errors
+  - Best for latency-sensitive operations
 
 Strategies can be configured at client creation or switched dynamically using `updateStrategy()`.
 

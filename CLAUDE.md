@@ -8,7 +8,7 @@ This file provides structured context for AI assistants to understand the @opens
 
 ### Key Design Patterns
 
-- **Strategy Pattern**: Pluggable request execution strategies (Fallback, Parallel)
+- **Strategy Pattern**: Pluggable request execution strategies (Fallback, Parallel, Race)
 - **Factory Pattern**: Client instantiation based on chain IDs
 - **Inheritance**: Base `NetworkClient` class extended by network-specific clients
 
@@ -30,7 +30,8 @@ This file provides structured context for AI assistants to understand the @opens
 │   │   ├── requestStrategy.ts   # StrategyFactory for creating strategies
 │   │   ├── strategiesTypes.ts   # Interface definitions
 │   │   ├── fallbackStrategy.ts  # Sequential fallback implementation
-│   │   └── parallelStrategy.ts  # Parallel execution with inconsistency detection
+│   │   ├── parallelStrategy.ts  # Parallel execution with inconsistency detection
+│   │   └── raceStrategy.ts      # Race execution returning first success
 │   ├── networks/                # Network-specific clients (by chain ID)
 │   │   ├── 1/                   # Ethereum mainnet
 │   │   ├── 10/                  # Optimism
@@ -73,15 +74,17 @@ This file provides structured context for AI assistants to understand the @opens
 #### NetworkClient ([src/NetworkClient.ts](src/NetworkClient.ts))
 
 Abstract base class providing:
+
 - `execute<T>(method: string, params: any[]): Promise<StrategyResult<T>>` - Generic RPC method execution
 - `getStrategy(): RequestStrategy` - Get current strategy instance
-- `getStrategyName(): string` - Get strategy name ("fallback" or "parallel")
+- `getStrategyName(): string` - Get strategy name ("fallback", "parallel", or "race")
 - `getRpcUrls(): string[]` - Get configured RPC URLs
 - `updateStrategy(config: StrategyConfig): void` - Dynamically switch strategies
 
 #### RpcClient ([src/RpcClient.ts](src/RpcClient.ts))
 
 Low-level JSON-RPC 2.0 client:
+
 - `call<T>(method: string, params: any[]): Promise<T>` - Direct RPC calls via fetch
 - `getUrl(): string` - Get RPC endpoint URL
 - `getRequestId(): number` - Get current request ID counter
@@ -102,11 +105,11 @@ interface StrategyResult<T> {
   success: boolean;
   data?: T;
   errors?: RPCProviderResponse[];
-  metadata?: RPCMetadata;  // Only for parallel strategy
+  metadata?: RPCMetadata;  // For parallel and race strategies
 }
 
 interface RPCMetadata {
-  strategy: "parallel" | "fallback";
+  strategy: "parallel" | "fallback" | "race";
   timestamp: number;
   responses: RPCProviderResponse[];
   hasInconsistencies: boolean;
@@ -122,7 +125,7 @@ interface RPCProviderResponse {
 }
 
 interface StrategyConfig {
-  type: "fallback" | "parallel";
+  type: "fallback" | "parallel" | "race";
   rpcUrls: string[];
 }
 ```
@@ -202,6 +205,7 @@ return { success: false, errors };
 ```
 
 **Characteristics**:
+
 - Minimal overhead (stops at first success)
 - No metadata tracking
 - Best for reliability when providers are generally consistent
@@ -230,12 +234,45 @@ const hasInconsistencies = this.detectInconsistencies(responses);
 ```
 
 **Characteristics**:
+
 - All providers called simultaneously
 - Response hashing for data consistency checks
 - Comprehensive metadata with timing and error information
 - Best for detecting provider divergence or testing reliability
 
+### RaceStrategy ([src/strategies/raceStrategy.ts](src/strategies/raceStrategy.ts))
+
+**Execution Pattern**: Concurrent with first-success wins
+
+```typescript
+// Create promises that resolve with data or reject with error info
+const racePromises = this.rpcClients.map(async (rpcClient): Promise<RaceWinner<T>> => {
+  try {
+    const data = await rpcClient.call<T>(method, params);
+    return { data, response: { url, status: "success", responseTime, data } };
+  } catch (error) {
+    errors.push({ url, status: "error", responseTime, error: message });
+    throw errorResponse;  // Reject so Promise.any continues to next
+  }
+});
+
+// Promise.any returns first fulfilled promise
+const winner = await Promise.any(racePromises);
+return { success: true, data: winner.data, metadata };
+```
+
+**Characteristics**:
+
+- All providers called simultaneously (like parallel)
+- Returns immediately when first provider succeeds
+- Minimizes latency by using the fastest responding provider
+- Only fails if ALL requests fail (AggregateError)
+- Includes metadata with winning response and any errors
+- Does not detect inconsistencies (no response comparison)
+- Best for latency-sensitive operations where any valid response is acceptable
+
 **Hash Algorithm** (32-bit integer hash):
+
 ```typescript
 private hashResponse(data: object): string {
   const normalized = JSON.stringify(data, Object.keys(data).sort());
@@ -254,7 +291,7 @@ private hashResponse(data: object): string {
 Creates appropriate strategy based on configuration:
 
 ```typescript
-static createStrategy(config: StrategyConfig): RequestStrategy {
+static create(config: StrategyConfig): RequestStrategy {
   if (config.rpcUrls.length === 0) {
     throw new Error("At least one RPC URL must be provided");
   }
@@ -264,6 +301,7 @@ static createStrategy(config: StrategyConfig): RequestStrategy {
   switch (config.type) {
     case "fallback": return new FallbackStrategy(rpcClients);
     case "parallel": return new ParallelStrategy(rpcClients);
+    case "race": return new RaceStrategy(rpcClients);
     default: throw new Error(`Unknown strategy type: ${config.type}`);
   }
 }
@@ -276,7 +314,7 @@ static createStrategy(config: StrategyConfig): RequestStrategy {
 | Network | Chain ID | Client Class | Special Features |
 |---------|----------|--------------|------------------|
 | Ethereum | 1 | `EthereumClient` | Full eth_*, web3_*, net_*, debug_*, trace_*, txpool_* methods |
-| Optimism | 10 | `OptimismClient` | Ethereum methods + optimism_* rollup methods + opp2p_* P2P + admin_* |
+| Optimism | 10 | `OptimismClient` | Ethereum methods + optimism_*rollup methods + opp2p_* P2P + admin_* |
 | BNB Smart Chain | 56 | `BNBClient` | Extended Ethereum methods + BSC-specific features |
 | BNB Testnet | 97 | `BNBClient` | Maps to BNBClient |
 | Polygon | 137 | `PolygonClient` | Ethereum methods + Polygon Bor validator methods |
@@ -307,6 +345,7 @@ All Ethereum-compatible networks include:
 ### Network-Specific Extensions
 
 **Optimism** ([src/networks/10/OptimismClient.ts](src/networks/10/OptimismClient.ts)):
+
 - `outputAtBlock()` - Get L2 output at block
 - `syncStatus()` - Get sync status
 - `rollupConfig()` - Get rollup configuration
@@ -315,6 +354,7 @@ All Ethereum-compatible networks include:
 - Admin: `adminStartSequencer()`, `adminStopSequencer()`, `adminSequencerActive()`
 
 **Arbitrum** ([src/networks/42161/ArbitrumClient.ts](src/networks/42161/ArbitrumClient.ts)):
+
 - `arbtraceBlock()` - Trace entire block
 - `arbtraceTransaction()` - Trace specific transaction
 - `arbtraceCall()` - Trace call with custom options
@@ -322,6 +362,7 @@ All Ethereum-compatible networks include:
 - Specialized trace options for VM tracing and state diffs
 
 **Aztec** ([src/networks/677868/AztecClient.ts](src/networks/677868/AztecClient.ts)):
+
 - Block operations: `getBlock()`, `getBlocks()`, `getBlockHeader()`
 - Transactions: `sendTx()`, `getTxReceipt()`, `getTxEffect()`
 - Contract queries: `getContractClass()`, `getContractInstance()`
@@ -513,8 +554,9 @@ describe("ComponentName - Functionality", () => {
 1. **Strategy Tests** ([tests/strategies/](tests/strategies/)):
    - Constructor validation (empty URLs, strategy types)
    - Strategy execution (success, error handling)
-   - Response metadata (parallel strategy)
+   - Response metadata (parallel and race strategies)
    - Fallback behavior
+   - Race strategy first-success behavior
 
 2. **Network Tests** ([tests/networks/](tests/networks/)):
    - Network-specific client instantiation
@@ -530,6 +572,7 @@ describe("ComponentName - Functionality", () => {
 ### Test Helpers
 
 [tests/helpers/validators.js](tests/helpers/validators.js):
+
 - `isHexString(value)` - Validates hex string format (0x prefix)
 
 ## Build and Configuration
