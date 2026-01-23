@@ -1,5 +1,5 @@
 export interface RPCMetadata {
-  strategy: "parallel" | "fallback";
+  strategy: "parallel" | "fallback" | "race";
   timestamp: number;
   responses: RPCProviderResponse[];
   hasInconsistencies: boolean;
