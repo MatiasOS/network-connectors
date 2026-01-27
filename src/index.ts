@@ -274,6 +274,7 @@ export type {
 // Concrete strategies
 export { FallbackStrategy } from "./strategies/fallbackStrategy.js";
 export { ParallelStrategy } from "./strategies/parallelStrategy.js";
+export { RaceStrategy } from "./strategies/raceStrategy.js";
 
 // Legacy RPC client (for backwards compatibility)
 export { RpcClient } from "./RpcClient.js";

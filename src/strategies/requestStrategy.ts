@@ -1,10 +1,11 @@
 import type { RequestStrategy } from "./strategiesTypes.js";
 import { FallbackStrategy } from "./fallbackStrategy.js";
 import { ParallelStrategy } from "./parallelStrategy.js";
+import { RaceStrategy } from "./raceStrategy.js";
 import { RpcClient } from "../RpcClient.js";
 
 export interface StrategyConfig {
-  type: "fallback" | "parallel";
+  type: "fallback" | "parallel" | "race";
   rpcUrls: string[];
 }
 
@@ -27,6 +28,8 @@ export class StrategyFactory {
         return new FallbackStrategy(rpcClients);
       case "parallel":
         return new ParallelStrategy(rpcClients);
+      case "race":
+        return new RaceStrategy(rpcClients);
       default:
         throw new Error(`Unknown strategy type: ${config.type}`);
     }
