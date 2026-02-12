@@ -267,7 +267,7 @@ describe("EthereumClient - Transaction Methods", () => {
     ],
   };
 
-  it.only("should call eth_getTransactionBySenderAndNonce", async () => {
+  it("should call eth_getTransactionBySenderAndNonce", async () => {
     const client = new EthereumClient(config);
 
     const sender = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'; // vitalik.eth
