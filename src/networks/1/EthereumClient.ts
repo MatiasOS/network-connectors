@@ -217,6 +217,13 @@ export class EthereumClient extends NetworkClient {
     return this.execute<EthTransaction | null>("eth_getTransactionByHash", [txHash]);
   }
 
+  async getTransactionBySenderAndNonce(
+    sender: string,
+    nonce: string,
+  ): Promise<StrategyResult<EthTransaction | null>> {
+    return this.execute<EthTransaction | null>("eth_getTransactionBySenderAndNonce", [sender, nonce]);
+  }
+
   async getTransactionByBlockHashAndIndex(
     blockHash: string,
     index: string,
