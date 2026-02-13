@@ -260,8 +260,65 @@ describe("EthereumClient - Account Methods", () => {
 describe("EthereumClient - Transaction Methods", () => {
   const config: StrategyConfig = {
     type: "fallback",
-    rpcUrls: TEST_URLS,
+    rpcUrls: [
+      "https://eth-pokt.nodies.app",
+      "https://eth.api.onfinality.io/public",
+      "https://ethereum.rpc.subquery.network/public",
+    ],
   };
+
+  it("should call eth_getTransactionBySenderAndNonce", async () => {
+    const client = new EthereumClient(config);
+
+    const sender = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'; // vitalik.eth
+    const nonce = "0x1";
+    const result = await client.getTransactionBySenderAndNonce(sender, nonce);
+
+    assert.strictEqual(result.success, true, "Result should be successful");
+    assert.ok(result.data && typeof result.data === "object", "Data should be an object");
+    const tx: any = result.data;
+
+    assert.strictEqual(tx.type, "0x0");
+    assert.strictEqual(tx.nonce, "0x1");
+    assert.strictEqual(tx.gasPrice, "0xba43b7400");
+    assert.strictEqual(tx.gas, "0x81650");
+    assert.strictEqual(tx.to.toLowerCase(), "0x7e2d0fe0ffdd78c264f8d40d19acb7d04390c6e8");
+    assert.strictEqual(tx.value, "0x51dac207a000");
+    assert.strictEqual(
+      tx.input,
+      "0x5a9809ed000000000000000000000000d8da6bf26964af9d7eed9e03e53415d37aa960450000000000000000000000001db3439a222c519ab44bb1144fc28167b4fa6ee600000000000000000000000000000000000000000000000000000000000000a0000000000000000000000000000000000000000000000000000012309ce5400000000000000000000000000000000000000000000000000000000000000000e000000000000000000000000000000000000000000000000000000000000000010000000000000000000000005ed8cee6b63b1c6afce3ad7c92f4fd7e1b8fad9f0000000000000000000000000000000000000000000000000000000000000009636f7720686f7273650000000000000000000000000000000000000000000000"
+    );
+    assert.strictEqual(
+      tx.r,
+      "0xdacd4f44332b7e1962a3ad0ab0dfc2d277e6119c5d467402a378982a8dcc9385"
+    );
+    assert.strictEqual(
+      tx.s,
+      "0x726f8ed4ab9213ae8840c2f92c769032cda97b98421b78a506bc75995ffdb13f"
+    );
+    assert.strictEqual(tx.v, "0x1c");
+    assert.strictEqual(
+      tx.hash,
+      "0xf3c0067e8aca43cf421dc502c0976525b89727fdfaee12bf356895f3b2bd7205"
+    );
+    assert.strictEqual(
+      tx.blockHash,
+      "0xedb89f2139f594b0a0b0682005a3836b82207a6b9f6282f0a06e34907d0e0051"
+    );
+    assert.strictEqual(tx.blockNumber, "0x4dca3");
+    assert.strictEqual(tx.transactionIndex, "0x2");
+    assert.strictEqual(tx.from.toLowerCase(), "0xd8da6bf26964af9d7eed9e03e53415d37aa96045");
+
+    // Metadata checks (avoid asserting volatile fields like timestamp/responseTime)
+    assert.ok(result.metadata, "Should have metadata");
+    assert.strictEqual(result.metadata.strategy, "fallback");
+    assert.ok(Array.isArray(result.metadata.responses) && result.metadata.responses.length >= 1);
+    const resp = result.metadata.responses[0] as any;
+    assert.strictEqual(resp.url, "https://eth-pokt.nodies.app");
+    assert.strictEqual(resp.status, "success");
+    assert.strictEqual(resp.data.hash, tx.hash);
+    assert.strictEqual(result.metadata.hasInconsistencies, false);
+  });
 
   it("should get transaction by hash", async () => {
     const client = new EthereumClient(config);
