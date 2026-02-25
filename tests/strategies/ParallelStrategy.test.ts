@@ -32,6 +32,24 @@ describe("ParallelStrategy - Constructor", () => {
   });
 });
 
+describe("ParallelStrategy - Data Type Correctness", () => {
+  it("should return actual RPC data, not the responses array", async () => {
+    const clients = TEST_URLS.map((url) => new RpcClient(url));
+    const strategy = new ParallelStrategy(clients);
+
+    const result = await strategy.execute<string>("eth_chainId", []);
+
+    assert.strictEqual(result.success, true);
+    assert.strictEqual(
+      typeof result.data,
+      "string",
+      "data should be the RPC result string, not an array",
+    );
+    assert.ok(result.data?.startsWith("0x"), "data should be a hex string (chain ID)");
+    assert.ok(!Array.isArray(result.data), "data should not be an array of responses");
+  });
+});
+
 describe("ParallelStrategy - Execute Success", () => {
   it("should execute eth_chainId in parallel", async () => {
     const clients = TEST_URLS.map((url) => new RpcClient(url));
