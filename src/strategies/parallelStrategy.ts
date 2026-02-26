@@ -23,12 +23,16 @@ export class ParallelStrategy implements RequestStrategy {
   // biome-ignore lint/suspicious/noExplicitAny: <TODO>
   async execute<T>(method: string, params: any[]): Promise<StrategyResult<T>> {
     const timestamp = Date.now();
+    let firstSuccessData: T | undefined;
 
     // Create promises for all RPC clients
     const promises = this.rpcClients.map(async (rpcClient) => {
       const startTime = Date.now();
       try {
         const data = await rpcClient.call<T>(method, params);
+        if (firstSuccessData === undefined) {
+          firstSuccessData = data;
+        }
         const responseTime = Date.now() - startTime;
         const hash = this.hashResponse(data as object);
 
@@ -86,10 +90,9 @@ export class ParallelStrategy implements RequestStrategy {
     };
 
     if (hasSuccess) {
-      // Return all responses in data field (type cast needed since data contains responses array)
       return {
         success: true,
-        data: responses as object as T,
+        data: firstSuccessData,
         metadata,
       };
     }
