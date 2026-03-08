@@ -14,6 +14,12 @@ import type {
   AvalancheCallDetailedResult,
   AvalancheBadBlock,
   AvalancheSuggestPriceOptions,
+  AvalancheWarpSignedMessage,
+  AvalancheVMConfig,
+  AvalancheGetUTXOsResponse,
+  AvalancheUTXOIndex,
+  AvalancheAtomicTxStatus,
+  AvalancheAtomicTx,
   BlockNumberOrTag,
   AccessListEntry,
 } from "./AvalancheTypes.js";
@@ -453,5 +459,168 @@ export class AvalancheClient extends NetworkClient {
 
   async traceFilter(filter: Record<string, any>): Promise<StrategyResult<any>> {
     return this.execute<any>("trace_filter", [filter]);
+  }
+
+  // ===== Warp APIs (Avalanche cross-chain messaging) =====
+
+  /**
+   * Get raw warp message bytes by message ID
+   * @param messageID - The warp message ID
+   */
+  async warpGetMessage(messageID: string): Promise<StrategyResult<AvalancheWarpSignedMessage>> {
+    return this.execute<AvalancheWarpSignedMessage>("warp_getMessage", [messageID]);
+  }
+
+  /**
+   * Get BLS signature for a warp message
+   * @param messageID - The warp message ID
+   */
+  async warpGetMessageSignature(
+    messageID: string,
+  ): Promise<StrategyResult<AvalancheWarpSignedMessage>> {
+    return this.execute<AvalancheWarpSignedMessage>("warp_getMessageSignature", [messageID]);
+  }
+
+  /**
+   * Get BLS signature for a block
+   * @param blockID - The block ID
+   */
+  async warpGetBlockSignature(
+    blockID: string,
+  ): Promise<StrategyResult<AvalancheWarpSignedMessage>> {
+    return this.execute<AvalancheWarpSignedMessage>("warp_getBlockSignature", [blockID]);
+  }
+
+  /**
+   * Get aggregated BLS signature for a warp message
+   * @param messageID - The warp message ID
+   * @param quorumNum - The quorum number
+   * @param subnetID - Optional subnet ID
+   */
+  async warpGetMessageAggregateSignature(
+    messageID: string,
+    quorumNum: number,
+    subnetID?: string,
+  ): Promise<StrategyResult<AvalancheWarpSignedMessage>> {
+    const params: any[] = [messageID, quorumNum];
+    if (subnetID !== undefined) params.push(subnetID);
+    return this.execute<AvalancheWarpSignedMessage>("warp_getMessageAggregateSignature", params);
+  }
+
+  /**
+   * Get aggregated BLS signature for a block
+   * @param blockID - The block ID
+   * @param quorumNum - The quorum number
+   * @param subnetID - Optional subnet ID
+   */
+  async warpGetBlockAggregateSignature(
+    blockID: string,
+    quorumNum: number,
+    subnetID?: string,
+  ): Promise<StrategyResult<AvalancheWarpSignedMessage>> {
+    const params: any[] = [blockID, quorumNum];
+    if (subnetID !== undefined) params.push(subnetID);
+    return this.execute<AvalancheWarpSignedMessage>("warp_getBlockAggregateSignature", params);
+  }
+
+  // ===== Admin APIs =====
+
+  /**
+   * Start the CPU profiler
+   */
+  async adminStartCPUProfiler(): Promise<StrategyResult<Record<string, never>>> {
+    return this.execute<Record<string, never>>("admin_startCPUProfiler");
+  }
+
+  /**
+   * Stop the CPU profiler
+   */
+  async adminStopCPUProfiler(): Promise<StrategyResult<Record<string, never>>> {
+    return this.execute<Record<string, never>>("admin_stopCPUProfiler");
+  }
+
+  /**
+   * Run a memory profile
+   */
+  async adminMemoryProfile(): Promise<StrategyResult<Record<string, never>>> {
+    return this.execute<Record<string, never>>("admin_memoryProfile");
+  }
+
+  /**
+   * Run a lock profile
+   */
+  async adminLockProfile(): Promise<StrategyResult<Record<string, never>>> {
+    return this.execute<Record<string, never>>("admin_lockProfile");
+  }
+
+  /**
+   * Set the log level
+   * @param level - The log level to set
+   */
+  async adminSetLogLevel(level: string): Promise<StrategyResult<Record<string, never>>> {
+    return this.execute<Record<string, never>>("admin_setLogLevel", [level]);
+  }
+
+  /**
+   * Get the VM configuration
+   */
+  async adminGetVMConfig(): Promise<StrategyResult<AvalancheVMConfig>> {
+    return this.execute<AvalancheVMConfig>("admin_getVMConfig");
+  }
+
+  // ===== Avalanche-specific APIs (avax.*) =====
+
+  /**
+   * Get UTXOs for the given addresses on the C-Chain
+   * @param addresses - Array of addresses to query
+   * @param sourceChain - The source chain identifier
+   * @param limit - Maximum number of UTXOs to return
+   * @param startIndex - Optional pagination start index
+   * @param encoding - Optional encoding format (e.g., "hex")
+   */
+  async avaxGetUTXOs(
+    addresses: string[],
+    sourceChain: string,
+    limit: number,
+    startIndex?: AvalancheUTXOIndex,
+    encoding?: string,
+  ): Promise<StrategyResult<AvalancheGetUTXOsResponse>> {
+    const params: any = { addresses, sourceChain, limit };
+    if (startIndex !== undefined) params.startIndex = startIndex;
+    if (encoding !== undefined) params.encoding = encoding;
+    return this.execute<AvalancheGetUTXOsResponse>("avax.getUTXOs", [params]);
+  }
+
+  /**
+   * Issue a signed transaction to the C-Chain
+   * @param tx - The signed transaction hex string
+   * @param encoding - Optional encoding format
+   */
+  async avaxIssueTx(tx: string, encoding?: string): Promise<StrategyResult<{ txID: string }>> {
+    const params: any = { tx };
+    if (encoding !== undefined) params.encoding = encoding;
+    return this.execute<{ txID: string }>("avax.issueTx", [params]);
+  }
+
+  /**
+   * Get the status of an atomic transaction
+   * @param txID - The transaction ID
+   */
+  async avaxGetAtomicTxStatus(txID: string): Promise<StrategyResult<AvalancheAtomicTxStatus>> {
+    return this.execute<AvalancheAtomicTxStatus>("avax.getAtomicTxStatus", [{ txID }]);
+  }
+
+  /**
+   * Get an atomic transaction by ID
+   * @param txID - The transaction ID
+   * @param encoding - Optional encoding format
+   */
+  async avaxGetAtomicTx(
+    txID: string,
+    encoding?: string,
+  ): Promise<StrategyResult<AvalancheAtomicTx>> {
+    const params: any = { txID };
+    if (encoding !== undefined) params.encoding = encoding;
+    return this.execute<AvalancheAtomicTx>("avax.getAtomicTx", [params]);
   }
 }

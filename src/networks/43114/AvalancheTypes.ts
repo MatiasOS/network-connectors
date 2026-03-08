@@ -77,3 +77,60 @@ export interface AvalancheSuggestPriceOptions {
   normal: AvalanchePriceTier;
   fast: AvalanchePriceTier;
 }
+
+// ===== Warp API types (Avalanche cross-chain messaging) =====
+
+/**
+ * Response from warp_getMessageAggregateSignature and warp_getBlockAggregateSignature
+ * Contains the serialized signed warp message
+ */
+export interface AvalancheWarpSignedMessage {
+  data: string;
+}
+
+// ===== Admin API types =====
+
+/**
+ * Response from admin_getVMConfig
+ * Contains the VM configuration object
+ */
+export interface AvalancheVMConfig {
+  config: Record<string, any>;
+}
+
+// ===== Avalanche-specific API types (avax.*) =====
+
+/**
+ * Start index for paginated UTXO queries
+ */
+export interface AvalancheUTXOIndex {
+  address: string;
+  utxo: string;
+}
+
+/**
+ * Response from avax.getUTXOs
+ */
+export interface AvalancheGetUTXOsResponse {
+  utxos: string[];
+  endIndex: AvalancheUTXOIndex;
+  numFetched: string;
+  encoding: string;
+}
+
+/**
+ * Response from avax.getAtomicTxStatus
+ */
+export interface AvalancheAtomicTxStatus {
+  status: string;
+  blockHeight?: number;
+}
+
+/**
+ * Response from avax.getAtomicTx
+ */
+export interface AvalancheAtomicTx {
+  tx: string;
+  encoding: string;
+  blockHeight?: number;
+}
