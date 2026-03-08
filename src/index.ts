@@ -132,6 +132,34 @@ export type {
   BlockNumberOrTag as ArbitrumBlockNumberOrTag,
 } from "./networks/42161/ArbitrumTypes.js";
 
+// Avalanche C-Chain (Chain ID: 43114)
+export { AvalancheClient } from "./networks/43114/AvalancheClient.js";
+export type {
+  AvalancheBlock,
+  AvalancheTransaction,
+  AvalancheTransactionReceipt,
+  AvalancheLog,
+  AvalancheLogFilter,
+  AvalancheCallObject,
+  AvalancheWithdrawal,
+  AvalancheSyncingStatus,
+  AvaxAtomicTx,
+  AvaxAtomicTxStatus,
+  AvaxUTXOsResponse,
+  AvaxIssueTxResponse,
+  AvaxImportParams,
+  AvaxExportParams,
+  AvalancheAdminNodeInfo,
+  AvalancheAdminPeerInfo,
+  AvalancheAccessListEntry,
+  AvalancheFeeHistory,
+  AvalancheTxPoolContent,
+  AvalancheTxPoolStatus,
+  AvaxAtomicTxStatusValue,
+  BlockNumberOrTag as AvalancheBlockNumberOrTag,
+  BlockTag as AvalancheBlockTag,
+} from "./networks/43114/AvalancheTypes.js";
+
 // Aztec (Chain ID: 677868)
 export { AztecClient } from "./networks/677868/AztecClient.js";
 export type {
