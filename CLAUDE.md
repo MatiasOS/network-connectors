@@ -41,6 +41,7 @@ This file provides structured context for AI assistants to understand the @opens
 │   │   ├── 8453/                # Base
 │   │   ├── 31337/               # Hardhat (local)
 │   │   ├── 42161/               # Arbitrum One
+│   │   ├── 43114/               # Avalanche C-Chain
 │   │   ├── 677868/              # Aztec
 │   │   ├── 11155111/            # Sepolia Testnet
 │   │   └── bitcoin/             # Bitcoin (CAIP-2: bip122:*)
@@ -320,6 +321,7 @@ static create(config: StrategyConfig): RequestStrategy {
 | Polygon | 137 | `PolygonClient` | Ethereum methods + Polygon Bor validator methods |
 | Base | 8453 | `BaseClient` | Optimism-compatible (reuses Optimism types/methods) |
 | Arbitrum One | 42161 | `ArbitrumClient` | Ethereum methods + arbtrace_* (Arbitrum-specific traces) |
+| Avalanche C-Chain | 43114 | `AvalancheClient` | Ethereum methods + avax cross-chain + admin + extended debug |
 | Aztec | 677868 | `AztecClient` | Custom node_*/nodeAdmin_* methods (non-EVM) |
 | Hardhat | 31337 | `EthereumClient` | Local development network |
 | Sepolia Testnet | 11155111 | `SepoliaClient` | Ethereum-compatible testnet |
@@ -360,6 +362,14 @@ All Ethereum-compatible networks include:
 - `arbtraceCall()` - Trace call with custom options
 - `arbtraceCallMany()` - Trace multiple calls
 - Specialized trace options for VM tracing and state diffs
+
+**Avalanche C-Chain** ([src/networks/43114/AvalancheClient.ts](src/networks/43114/AvalancheClient.ts)):
+
+- Cross-chain: `avaxGetAtomicTx()`, `avaxGetAtomicTxStatus()`, `avaxGetUTXOs()`, `avaxIssueTx()`, `avaxImport()`, `avaxExport()`
+- Admin: `adminAddPeer()`, `adminRemovePeer()`, `adminPeers()`, `adminNodeInfo()`, `adminAlias()`
+- Extended debug: `debugTraceBlock()`, `debugTraceBlockByHash()`, `debugTraceBlockByNumber()`, `debugTraceBadBlock()`, `debugTraceChain()`, `debugGetBadBlocks()`, `debugDumpBlock()`, `debugMemStats()`, `debugGcStats()`, `debugMetrics()`
+- Extra eth: `accounts()`, `coinbase()`, `protocolVersion()`, `sign()`, `signTransaction()`, `signTypedData()`, `signTypedDataV4()`, `getBlockReceipts()`
+- Extra txpool: `contentFrom()`
 
 **Aztec** ([src/networks/677868/AztecClient.ts](src/networks/677868/AztecClient.ts)):
 
@@ -700,3 +710,5 @@ To add new RPC methods to existing network:
 - **Optional Chaining**: Use for EIP-specific fields (baseFeePerGas, maxFeePerGas, etc.)
 - **Biome**: Use Biome for linting/formatting, not ESLint/Prettier
 - **Native Test**: Use Node.js native test framework, not Jest/Mocha
+- **Real RPC Tests**: Always test with real RPC calls against live endpoints. Never mock RPC calls
+- **Type Validation**: Always validate response data against the expected TypeScript types. If a method cannot be validated against real types (e.g., admin/debug methods unsupported on public nodes), tag the test with `[weak]`. Tests with full type validation are tagged `[strong]`

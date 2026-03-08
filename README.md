@@ -4,7 +4,7 @@ TypeScript library providing unified, type-safe RPC client interfaces for multip
 
 ## Features
 
-- **Multi-Network Support**: Unified API for 10+ blockchain networks including EVM chains (Ethereum, Optimism, Arbitrum, Polygon, BNB, Base, Aztec) and Bitcoin
+- **Multi-Network Support**: Unified API for 10+ blockchain networks including EVM chains (Ethereum, Optimism, Arbitrum, Polygon, BNB, Base, Avalanche, Aztec) and Bitcoin
 - **Bitcoin Support**: Full Bitcoin Core v28+ RPC support with ~115 methods using CAIP-2/BIP122 chain identifiers
 - **Strategy Pattern**: Pluggable request execution strategies (Fallback for reliability, Parallel for consistency detection, Race for minimum latency)
 - **Type Safety**: Strong TypeScript typing with network-specific type definitions
@@ -26,6 +26,7 @@ TypeScript library providing unified, type-safe RPC client interfaces for multip
 | Polygon | 137 | `PolygonClient` | Ethereum + Polygon Bor validator methods |
 | Base | 8453 | `BaseClient` | Optimism-compatible (reuses Optimism types) |
 | Arbitrum One | 42161 | `ArbitrumClient` | Ethereum + arbtrace_* (Arbitrum traces) |
+| Avalanche C-Chain | 43114 | `AvalancheClient` | Ethereum + avax cross-chain, admin, extended debug |
 | Aztec | 677868 | `AztecClient` | Custom node_*/nodeAdmin_* methods (non-EVM) |
 | Hardhat | 31337 | `EthereumClient` | Local development network |
 | Sepolia Testnet | 11155111 | `SepoliaClient` | Ethereum-compatible testnet |
@@ -284,7 +285,14 @@ Tests are organized by functionality:
   - Error propagation
 
 - **tests/helpers/**: Test utilities
-  - `validators.js`: Helper functions for validation (e.g., `isHexString()`)
+  - `validators.ts`: Helper functions for validation (e.g., `isHexString()`, `validateSuccessResult()`)
+
+### Testing Rules
+
+- **Real RPC calls only**: All network client tests must call live RPC endpoints. Never mock RPC calls.
+- **Type validation**: Tests must validate that response data matches the expected TypeScript type definitions. Each test is tagged:
+  - `[strong]`: Validates response shape, field types, and format (e.g., hex strings, required fields)
+  - `[weak]`: Cannot fully validate response types (e.g., admin/debug methods unsupported on public nodes). Only checks that a result is returned.
 
 ## Contributing
 
