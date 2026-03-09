@@ -193,12 +193,74 @@ export class AvalancheClient extends NetworkClient {
     return this.execute<unknown>("eth_getProof", [address, storageKeys, blockTag]);
   }
 
+  /**
+   * Get the list of accounts managed by the node
+   */
+  async accounts(): Promise<StrategyResult<string[]>> {
+    return this.execute<string[]>("eth_accounts");
+  }
+
+  /**
+   * Get the coinbase address
+   */
+  async coinbase(): Promise<StrategyResult<string>> {
+    return this.execute<string>("eth_coinbase");
+  }
+
+  /**
+   * Get the Ethereum protocol version
+   */
+  async protocolVersion(): Promise<StrategyResult<string>> {
+    return this.execute<string>("eth_protocolVersion");
+  }
+
   async sendRawTransaction(signedTx: string): Promise<StrategyResult<string>> {
     return this.execute<string>("eth_sendRawTransaction", [signedTx]);
   }
 
   async sendTransaction(txObject: Record<string, any>): Promise<StrategyResult<string>> {
     return this.execute<string>("eth_sendTransaction", [txObject]);
+  }
+
+  /**
+   * Sign data with an account
+   * @param address - The address to sign with
+   * @param data - The data to sign
+   */
+  async sign(address: string, data: string): Promise<StrategyResult<string>> {
+    return this.execute<string>("eth_sign", [address, data]);
+  }
+
+  /**
+   * Sign a transaction
+   * @param txObject - The transaction object to sign
+   */
+  async signTransaction(txObject: Record<string, any>): Promise<StrategyResult<string>> {
+    return this.execute<string>("eth_signTransaction", [txObject]);
+  }
+
+  /**
+   * Sign typed data (EIP-712)
+   * @param address - The address to sign with
+   * @param typedData - The typed data object
+   */
+  async signTypedData(
+    address: string,
+    typedData: Record<string, any>,
+  ): Promise<StrategyResult<string>> {
+    return this.execute<string>("eth_signTypedData", [address, typedData]);
+  }
+
+  /**
+   * Sign typed data v4 (EIP-712)
+   * @param address - The address to sign with
+   * @param typedData - The typed data object
+   */
+  async signTypedDataV4(
+    address: string,
+    typedData: Record<string, any>,
+  ): Promise<StrategyResult<string>> {
+    return this.execute<string>("eth_signTypedData_v4", [address, typedData]);
   }
 
   async call(
@@ -263,6 +325,16 @@ export class AvalancheClient extends NetworkClient {
     return this.execute<AvalancheTransactionReceipt | null>("eth_getTransactionReceipt", [txHash]);
   }
 
+  /**
+   * Get all transaction receipts for a block
+   * @param blockTag - Block number or tag
+   */
+  async getBlockReceipts(
+    blockTag: BlockNumberOrTag,
+  ): Promise<StrategyResult<AvalancheTransactionReceipt[] | null>> {
+    return this.execute<AvalancheTransactionReceipt[] | null>("eth_getBlockReceipts", [blockTag]);
+  }
+
   // ===== Logs & Filters =====
 
   async newFilter(filterObject: AvalancheLogFilter): Promise<StrategyResult<string>> {
@@ -311,6 +383,16 @@ export class AvalancheClient extends NetworkClient {
     const params: any[] = [blockCount, newestBlock];
     if (rewardPercentiles !== undefined) params.push(rewardPercentiles);
     return this.execute<any>("eth_feeHistory", params);
+  }
+
+  // ===== Deprecated / Legacy =====
+
+  async mining(): Promise<StrategyResult<boolean>> {
+    return this.execute<boolean>("eth_mining");
+  }
+
+  async hashRate(): Promise<StrategyResult<string>> {
+    return this.execute<string>("eth_hashrate");
   }
 
   // ===== Avalanche-specific Eth Extensions =====
@@ -379,6 +461,10 @@ export class AvalancheClient extends NetworkClient {
     return this.execute<Record<string, any>>("txpool_inspect");
   }
 
+  async txPoolContentFrom(address: string): Promise<StrategyResult<Record<string, any>>> {
+    return this.execute<Record<string, any>>("txpool_contentFrom", [address]);
+  }
+
   // ===== Debug Methods =====
 
   async debugTraceTransaction(
@@ -428,6 +514,74 @@ export class AvalancheClient extends NetworkClient {
 
   async debugGetModifiedAccountsByNumber(blockNumber: string): Promise<StrategyResult<any>> {
     return this.execute<any>("debug_getModifiedAccountsByNumber", [blockNumber]);
+  }
+
+  async debugTraceBlockByNumber(
+    blockNumber: BlockNumberOrTag,
+    options: Record<string, any> = {},
+  ): Promise<StrategyResult<any>> {
+    return this.execute<any>("debug_traceBlockByNumber", [blockNumber, options]);
+  }
+
+  async debugTraceBlockByHash(
+    blockHash: string,
+    options: Record<string, any> = {},
+  ): Promise<StrategyResult<any>> {
+    return this.execute<any>("debug_traceBlockByHash", [blockHash, options]);
+  }
+
+  async debugTraceBlock(
+    rlpBlock: string,
+    options: Record<string, any> = {},
+  ): Promise<StrategyResult<any>> {
+    return this.execute<any>("debug_traceBlock", [rlpBlock, options]);
+  }
+
+  async debugTraceBadBlock(
+    blockHash: string,
+    options: Record<string, any> = {},
+  ): Promise<StrategyResult<any>> {
+    return this.execute<any>("debug_traceBadBlock", [blockHash, options]);
+  }
+
+  async debugTraceChain(startBlock: string, endBlock: string): Promise<StrategyResult<any>> {
+    return this.execute<any>("debug_traceChain", [startBlock, endBlock]);
+  }
+
+  async debugTraceBlockFromFile(path: string): Promise<StrategyResult<any>> {
+    return this.execute<any>("debug_traceBlockFromFile", [path]);
+  }
+
+  async debugGetBadBlocks(): Promise<StrategyResult<any>> {
+    return this.execute<any>("debug_getBadBlocks");
+  }
+
+  async debugIntermediateRoots(blockHash: string): Promise<StrategyResult<any>> {
+    return this.execute<any>("debug_intermediateRoots", [blockHash]);
+  }
+
+  async debugDumpBlock(blockNumber: string): Promise<StrategyResult<any>> {
+    return this.execute<any>("debug_dumpBlock", [blockNumber]);
+  }
+
+  async debugMemStats(): Promise<StrategyResult<any>> {
+    return this.execute<any>("debug_memStats");
+  }
+
+  async debugGcStats(): Promise<StrategyResult<any>> {
+    return this.execute<any>("debug_gcStats");
+  }
+
+  async debugSetGCPercent(percent: number): Promise<StrategyResult<any>> {
+    return this.execute<any>("debug_setGCPercent", [percent]);
+  }
+
+  async debugMetrics(): Promise<StrategyResult<any>> {
+    return this.execute<any>("debug_metrics");
+  }
+
+  async debugVerbosity(level: number): Promise<StrategyResult<any>> {
+    return this.execute<any>("debug_verbosity", [level]);
   }
 
   // ===== Trace Methods =====
@@ -568,6 +722,45 @@ export class AvalancheClient extends NetworkClient {
     return this.execute<AvalancheVMConfig>("admin_getVMConfig");
   }
 
+  /**
+   * Get node information
+   */
+  async adminNodeInfo(): Promise<StrategyResult<any>> {
+    return this.execute<any>("admin_nodeInfo");
+  }
+
+  /**
+   * Get connected peers
+   */
+  async adminPeers(): Promise<StrategyResult<any[]>> {
+    return this.execute<any[]>("admin_peers");
+  }
+
+  /**
+   * Add a peer
+   * @param enode - The enode URL of the peer
+   */
+  async adminAddPeer(enode: string): Promise<StrategyResult<boolean>> {
+    return this.execute<boolean>("admin_addPeer", [enode]);
+  }
+
+  /**
+   * Remove a peer
+   * @param enode - The enode URL of the peer
+   */
+  async adminRemovePeer(enode: string): Promise<StrategyResult<boolean>> {
+    return this.execute<boolean>("admin_removePeer", [enode]);
+  }
+
+  /**
+   * Create an alias for an endpoint
+   * @param endpoint - The endpoint path
+   * @param alias - The alias path
+   */
+  async adminAlias(endpoint: string, alias: string): Promise<StrategyResult<any>> {
+    return this.execute<any>("admin_alias", [endpoint, alias]);
+  }
+
   // ===== Avalanche-specific APIs (avax.*) =====
 
   /**
@@ -622,5 +815,21 @@ export class AvalancheClient extends NetworkClient {
     const params: any = { txID };
     if (encoding !== undefined) params.encoding = encoding;
     return this.execute<AvalancheAtomicTx>("avax.getAtomicTx", [params]);
+  }
+
+  /**
+   * Import AVAX from the X-Chain or P-Chain to the C-Chain
+   * @param params - Import parameters (to, sourceChain, username, password)
+   */
+  async avaxImport(params: Record<string, any>): Promise<StrategyResult<{ txID: string }>> {
+    return this.execute<{ txID: string }>("avax.import", [params]);
+  }
+
+  /**
+   * Export AVAX from the C-Chain to the X-Chain or P-Chain
+   * @param params - Export parameters (amount, assetID, to, username, password)
+   */
+  async avaxExport(params: Record<string, any>): Promise<StrategyResult<{ txID: string }>> {
+    return this.execute<{ txID: string }>("avax.export", [params]);
   }
 }
