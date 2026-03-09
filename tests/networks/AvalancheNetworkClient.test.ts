@@ -50,14 +50,25 @@ function validateAvalancheBlock(block: any, fullTx = false): void {
     assert.ok(field in block, `AvalancheBlock should have required field '${field}'`);
   }
 
+  // Required string fields (non-null)
   assert.strictEqual(typeof block.number, "string", "number should be string");
   assert.strictEqual(typeof block.hash, "string", "hash should be string");
   assert.strictEqual(typeof block.parentHash, "string", "parentHash should be string");
   assert.strictEqual(typeof block.nonce, "string", "nonce should be string");
+  assert.strictEqual(typeof block.sha3Uncles, "string", "sha3Uncles should be string");
+  assert.strictEqual(typeof block.logsBloom, "string", "logsBloom should be string");
+  assert.strictEqual(typeof block.transactionsRoot, "string", "transactionsRoot should be string");
+  assert.strictEqual(typeof block.stateRoot, "string", "stateRoot should be string");
+  assert.strictEqual(typeof block.receiptsRoot, "string", "receiptsRoot should be string");
+  assert.strictEqual(typeof block.miner, "string", "miner should be string");
+  assert.strictEqual(typeof block.difficulty, "string", "difficulty should be string");
+  assert.strictEqual(typeof block.extraData, "string", "extraData should be string");
+  assert.strictEqual(typeof block.size, "string", "size should be string");
   assert.strictEqual(typeof block.gasLimit, "string", "gasLimit should be string");
   assert.strictEqual(typeof block.gasUsed, "string", "gasUsed should be string");
   assert.strictEqual(typeof block.timestamp, "string", "timestamp should be string");
 
+  // Hex validation on key fields
   assert.ok(isHexString(block.number), "number should be hex");
   assert.ok(isHexString(block.hash), "hash should be hex");
   assert.ok(isHexString(block.parentHash), "parentHash should be hex");
@@ -65,6 +76,7 @@ function validateAvalancheBlock(block: any, fullTx = false): void {
   assert.ok(isHexString(block.gasUsed), "gasUsed should be hex");
   assert.ok(isHexString(block.timestamp), "timestamp should be hex");
 
+  // transactions array
   assert.ok(Array.isArray(block.transactions), "transactions should be array");
   if (fullTx && block.transactions.length > 0) {
     validateAvalancheTransaction(block.transactions[0]);
@@ -72,13 +84,27 @@ function validateAvalancheBlock(block: any, fullTx = false): void {
     assert.strictEqual(typeof block.transactions[0], "string", "tx hashes should be strings");
   }
 
+  // uncles array
   assert.ok(Array.isArray(block.uncles), "uncles should be array");
 
+  // Optional fields: type check only if present
+  if ("totalDifficulty" in block && block.totalDifficulty !== undefined) {
+    assert.strictEqual(typeof block.totalDifficulty, "string", "totalDifficulty should be string");
+  }
   if ("baseFeePerGas" in block && block.baseFeePerGas !== undefined) {
     assert.strictEqual(typeof block.baseFeePerGas, "string", "baseFeePerGas should be string");
   }
+  if ("mixHash" in block && block.mixHash !== undefined) {
+    assert.strictEqual(typeof block.mixHash, "string", "mixHash should be string");
+  }
+  if ("withdrawalsRoot" in block && block.withdrawalsRoot !== undefined) {
+    assert.strictEqual(typeof block.withdrawalsRoot, "string", "withdrawalsRoot should be string");
+  }
   if ("withdrawals" in block && block.withdrawals !== undefined) {
     assert.ok(Array.isArray(block.withdrawals), "withdrawals should be array");
+    if (block.withdrawals.length > 0) {
+      validateAvalancheWithdrawal(block.withdrawals[0]);
+    }
   }
 }
 
@@ -88,13 +114,21 @@ function validateAvalancheTransaction(tx: any): void {
     assert.ok(field in tx, `AvalancheTransaction should have required field '${field}'`);
   }
 
+  // Required string fields
   assert.strictEqual(typeof tx.hash, "string", "hash should be string");
   assert.ok(isHexString(tx.hash), "hash should be hex");
+  assert.strictEqual(typeof tx.nonce, "string", "nonce should be string");
   assert.strictEqual(typeof tx.from, "string", "from should be string");
   assert.ok(isAddress(tx.from), "from should be address");
   assert.strictEqual(typeof tx.value, "string", "value should be string");
   assert.strictEqual(typeof tx.gas, "string", "gas should be string");
+  assert.strictEqual(typeof tx.input, "string", "input should be string");
+  assert.strictEqual(typeof tx.type, "string", "type should be string");
+  assert.strictEqual(typeof tx.v, "string", "v should be string");
+  assert.strictEqual(typeof tx.r, "string", "r should be string");
+  assert.strictEqual(typeof tx.s, "string", "s should be string");
 
+  // Nullable fields
   assert.ok(
     tx.blockHash === null || typeof tx.blockHash === "string",
     "blockHash should be string|null",
@@ -103,8 +137,13 @@ function validateAvalancheTransaction(tx: any): void {
     tx.blockNumber === null || typeof tx.blockNumber === "string",
     "blockNumber should be string|null",
   );
+  assert.ok(
+    tx.transactionIndex === null || typeof tx.transactionIndex === "string",
+    "transactionIndex should be string|null",
+  );
   assert.ok(tx.to === null || typeof tx.to === "string", "to should be string|null");
 
+  // Optional fields
   if ("gasPrice" in tx && tx.gasPrice !== undefined) {
     assert.strictEqual(typeof tx.gasPrice, "string", "gasPrice should be string");
   }
@@ -118,6 +157,12 @@ function validateAvalancheTransaction(tx: any): void {
       "maxPriorityFeePerGas should be string",
     );
   }
+  if ("maxFeePerBlobGas" in tx && tx.maxFeePerBlobGas !== undefined) {
+    assert.strictEqual(typeof tx.maxFeePerBlobGas, "string", "maxFeePerBlobGas should be string");
+  }
+  if ("blobVersionedHashes" in tx && tx.blobVersionedHashes !== undefined) {
+    assert.ok(Array.isArray(tx.blobVersionedHashes), "blobVersionedHashes should be array");
+  }
   if ("accessList" in tx && tx.accessList !== undefined) {
     assert.ok(Array.isArray(tx.accessList), "accessList should be array");
     if (tx.accessList.length > 0) {
@@ -127,11 +172,17 @@ function validateAvalancheTransaction(tx: any): void {
   if ("chainId" in tx && tx.chainId !== undefined) {
     assert.strictEqual(typeof tx.chainId, "string", "chainId should be string");
   }
+  if ("yParity" in tx && tx.yParity !== undefined) {
+    assert.strictEqual(typeof tx.yParity, "string", "yParity should be string");
+  }
 }
 
 function validateAvalancheAccessListEntry(entry: any): void {
   assert.strictEqual(typeof entry.address, "string", "accessList entry address should be string");
   assert.ok(Array.isArray(entry.storageKeys), "accessList entry storageKeys should be array");
+  for (const key of entry.storageKeys) {
+    assert.strictEqual(typeof key, "string", "storageKey should be string");
+  }
 }
 
 function validateAvalancheTransactionReceipt(receipt: any): void {
@@ -154,19 +205,62 @@ function validateAvalancheTransactionReceipt(receipt: any): void {
     );
   }
 
+  assert.strictEqual(typeof receipt.transactionHash, "string", "transactionHash should be string");
   assert.ok(isHexString(receipt.transactionHash), "transactionHash should be hex");
+  assert.strictEqual(
+    typeof receipt.transactionIndex,
+    "string",
+    "transactionIndex should be string",
+  );
+  assert.strictEqual(typeof receipt.blockHash, "string", "blockHash should be string");
   assert.ok(isHexString(receipt.blockHash), "blockHash should be hex");
+  assert.strictEqual(typeof receipt.blockNumber, "string", "blockNumber should be string");
   assert.ok(isHexString(receipt.blockNumber), "blockNumber should be hex");
+  assert.strictEqual(typeof receipt.from, "string", "from should be string");
   assert.ok(isAddress(receipt.from), "from should be address");
   assert.ok(receipt.to === null || typeof receipt.to === "string", "to should be string|null");
+  assert.strictEqual(
+    typeof receipt.cumulativeGasUsed,
+    "string",
+    "cumulativeGasUsed should be string",
+  );
+  assert.strictEqual(typeof receipt.gasUsed, "string", "gasUsed should be string");
+  assert.ok(
+    receipt.contractAddress === null || typeof receipt.contractAddress === "string",
+    "contractAddress should be string|null",
+  );
   assert.ok(Array.isArray(receipt.logs), "logs should be array");
   for (const log of receipt.logs) {
     validateAvalancheLog(log);
+  }
+  assert.strictEqual(typeof receipt.logsBloom, "string", "logsBloom should be string");
+  assert.strictEqual(typeof receipt.type, "string", "type should be string");
+
+  // Optional fields
+  if ("effectiveGasPrice" in receipt && receipt.effectiveGasPrice !== undefined) {
+    assert.strictEqual(
+      typeof receipt.effectiveGasPrice,
+      "string",
+      "effectiveGasPrice should be string",
+    );
+  }
+  if ("blobGasUsed" in receipt && receipt.blobGasUsed !== undefined) {
+    assert.strictEqual(typeof receipt.blobGasUsed, "string", "blobGasUsed should be string");
+  }
+  if ("blobGasPrice" in receipt && receipt.blobGasPrice !== undefined) {
+    assert.strictEqual(typeof receipt.blobGasPrice, "string", "blobGasPrice should be string");
+  }
+  if ("root" in receipt && receipt.root !== undefined) {
+    assert.strictEqual(typeof receipt.root, "string", "root should be string");
+  }
+  if ("status" in receipt && receipt.status !== undefined) {
+    assert.strictEqual(typeof receipt.status, "string", "status should be string");
   }
 }
 
 function validateAvalancheLog(log: any): void {
   const requiredFields = [
+    "removed",
     "logIndex",
     "transactionIndex",
     "transactionHash",
@@ -180,28 +274,67 @@ function validateAvalancheLog(log: any): void {
     assert.ok(field in log, `AvalancheLog should have required field '${field}'`);
   }
 
+  assert.strictEqual(typeof log.removed, "boolean", "removed should be boolean");
+  assert.strictEqual(typeof log.logIndex, "string", "logIndex should be string");
+  assert.strictEqual(typeof log.transactionIndex, "string", "transactionIndex should be string");
+  assert.strictEqual(typeof log.transactionHash, "string", "transactionHash should be string");
   assert.ok(isHexString(log.transactionHash), "transactionHash should be hex");
+  assert.strictEqual(typeof log.blockHash, "string", "blockHash should be string");
   assert.ok(isHexString(log.blockHash), "blockHash should be hex");
+  assert.strictEqual(typeof log.blockNumber, "string", "blockNumber should be string");
   assert.ok(isHexString(log.blockNumber), "blockNumber should be hex");
+  assert.strictEqual(typeof log.address, "string", "address should be string");
   assert.ok(isAddress(log.address), "address should be valid address");
+  assert.strictEqual(typeof log.data, "string", "data should be string");
   assert.ok(Array.isArray(log.topics), "topics should be array");
   for (const topic of log.topics) {
+    assert.strictEqual(typeof topic, "string", "topic should be string");
     assert.ok(isHexString(topic), "topic should be hex");
   }
+}
+
+function validateAvalancheWithdrawal(w: any): void {
+  assert.strictEqual(typeof w.index, "string", "withdrawal index should be string");
+  assert.strictEqual(
+    typeof w.validatorIndex,
+    "string",
+    "withdrawal validatorIndex should be string",
+  );
+  assert.strictEqual(typeof w.address, "string", "withdrawal address should be string");
+  assert.strictEqual(typeof w.amount, "string", "withdrawal amount should be string");
+}
+
+function validateAvalancheSyncingStatus(status: any): void {
+  assert.strictEqual(typeof status.startingBlock, "string", "startingBlock should be string");
+  assert.strictEqual(typeof status.currentBlock, "string", "currentBlock should be string");
+  assert.strictEqual(typeof status.highestBlock, "string", "highestBlock should be string");
 }
 
 function validateAvalancheFeeHistory(fh: any): void {
   const requiredFields = ["oldestBlock", "baseFeePerGas", "gasUsedRatio"];
   for (const field of requiredFields) {
-    assert.ok(field in fh, `FeeHistory should have required field '${field}'`);
+    assert.ok(field in fh, `AvalancheFeeHistory should have required field '${field}'`);
   }
 
+  assert.strictEqual(typeof fh.oldestBlock, "string", "oldestBlock should be string");
   assert.ok(isHexString(fh.oldestBlock), "oldestBlock should be hex");
   assert.ok(Array.isArray(fh.baseFeePerGas), "baseFeePerGas should be array");
+  for (const fee of fh.baseFeePerGas) {
+    assert.strictEqual(typeof fee, "string", "baseFeePerGas entry should be string");
+  }
   assert.ok(Array.isArray(fh.gasUsedRatio), "gasUsedRatio should be array");
+  for (const ratio of fh.gasUsedRatio) {
+    assert.strictEqual(typeof ratio, "number", "gasUsedRatio entry should be number");
+  }
 
   if ("reward" in fh && fh.reward !== undefined) {
     assert.ok(Array.isArray(fh.reward), "reward should be array");
+    for (const rewardBlock of fh.reward) {
+      assert.ok(Array.isArray(rewardBlock), "reward entry should be array");
+      for (const r of rewardBlock) {
+        assert.ok(r === null || typeof r === "string", "reward value should be string|null");
+      }
+    }
   }
 }
 
@@ -210,6 +343,84 @@ function validateAvalancheTxPoolStatus(status: any): void {
   assert.ok("queued" in status, "TxPoolStatus should have queued");
   assert.strictEqual(typeof status.pending, "string", "pending should be string");
   assert.strictEqual(typeof status.queued, "string", "queued should be string");
+}
+
+function validateAvalancheAdminNodeInfo(info: any): void {
+  const requiredFields = ["id", "name", "enode", "enr", "ip", "ports", "listenAddr", "protocols"];
+  for (const field of requiredFields) {
+    assert.ok(field in info, `AvalancheAdminNodeInfo should have required field '${field}'`);
+  }
+
+  assert.strictEqual(typeof info.id, "string", "id should be string");
+  assert.strictEqual(typeof info.name, "string", "name should be string");
+  assert.strictEqual(typeof info.enode, "string", "enode should be string");
+  assert.strictEqual(typeof info.enr, "string", "enr should be string");
+  assert.strictEqual(typeof info.ip, "string", "ip should be string");
+  assert.strictEqual(typeof info.ports, "object", "ports should be object");
+  assert.strictEqual(typeof info.ports.discovery, "number", "ports.discovery should be number");
+  assert.strictEqual(typeof info.ports.listener, "number", "ports.listener should be number");
+  assert.strictEqual(typeof info.listenAddr, "string", "listenAddr should be string");
+  assert.strictEqual(typeof info.protocols, "object", "protocols should be object");
+}
+
+function validateAvalancheAdminPeerInfo(peer: any): void {
+  const requiredFields = ["id", "name", "enode", "enr", "caps", "network", "protocols"];
+  for (const field of requiredFields) {
+    assert.ok(field in peer, `AvalancheAdminPeerInfo should have required field '${field}'`);
+  }
+
+  assert.strictEqual(typeof peer.id, "string", "id should be string");
+  assert.strictEqual(typeof peer.name, "string", "name should be string");
+  assert.strictEqual(typeof peer.enode, "string", "enode should be string");
+  assert.strictEqual(typeof peer.enr, "string", "enr should be string");
+  assert.ok(Array.isArray(peer.caps), "caps should be array");
+  assert.strictEqual(typeof peer.network, "object", "network should be object");
+  assert.strictEqual(
+    typeof peer.network.localAddress,
+    "string",
+    "network.localAddress should be string",
+  );
+  assert.strictEqual(
+    typeof peer.network.remoteAddress,
+    "string",
+    "network.remoteAddress should be string",
+  );
+  assert.strictEqual(typeof peer.network.inbound, "boolean", "network.inbound should be boolean");
+  assert.strictEqual(typeof peer.network.trusted, "boolean", "network.trusted should be boolean");
+  assert.strictEqual(typeof peer.network.static, "boolean", "network.static should be boolean");
+  assert.strictEqual(typeof peer.protocols, "object", "protocols should be object");
+}
+
+function validateAvaxAtomicTx(tx: any): void {
+  assert.strictEqual(typeof tx.tx, "string", "tx should be string");
+  assert.strictEqual(typeof tx.encoding, "string", "encoding should be string");
+  assert.strictEqual(typeof tx.blockHeight, "string", "blockHeight should be string");
+}
+
+function validateAvaxAtomicTxStatus(status: any): void {
+  assert.ok("status" in status, "AvaxAtomicTxStatus should have status");
+  assert.strictEqual(typeof status.status, "string", "status should be string");
+  const validStatuses = ["Accepted", "Processing", "Dropped", "Unknown"];
+  assert.ok(
+    validStatuses.includes(status.status),
+    `status should be one of ${validStatuses.join(", ")}, got '${status.status}'`,
+  );
+  if ("blockHeight" in status && status.blockHeight !== undefined) {
+    assert.strictEqual(typeof status.blockHeight, "string", "blockHeight should be string");
+  }
+}
+
+function validateAvaxUTXOsResponse(resp: any): void {
+  assert.strictEqual(typeof resp.numFetched, "string", "numFetched should be string");
+  assert.ok(Array.isArray(resp.utxos), "utxos should be array");
+  assert.strictEqual(typeof resp.endIndex, "object", "endIndex should be object");
+  assert.strictEqual(typeof resp.endIndex.address, "string", "endIndex.address should be string");
+  assert.strictEqual(typeof resp.endIndex.utxo, "string", "endIndex.utxo should be string");
+  assert.strictEqual(typeof resp.encoding, "string", "encoding should be string");
+}
+
+function validateAvaxIssueTxResponse(resp: any): void {
+  assert.strictEqual(typeof resp.txID, "string", "txID should be string");
 }
 
 // ===== Tests =====
@@ -307,10 +518,7 @@ describe("AvalancheClient - Eth Chain Info", () => {
       if (result.data === false) {
         assert.strictEqual(result.data, false, "Not syncing should return false");
       } else {
-        const status = result.data as any;
-        assert.strictEqual(typeof status.startingBlock, "string", "startingBlock should be string");
-        assert.strictEqual(typeof status.currentBlock, "string", "currentBlock should be string");
-        assert.strictEqual(typeof status.highestBlock, "string", "highestBlock should be string");
+        validateAvalancheSyncingStatus(result.data);
       }
     }
   });
@@ -321,6 +529,27 @@ describe("AvalancheClient - Eth Chain Info", () => {
 
     if (result.success) {
       assert.ok(Array.isArray(result.data), "Accounts should be an array");
+      for (const account of result.data as string[]) {
+        assert.strictEqual(typeof account, "string", "Account should be string");
+      }
+    }
+  });
+
+  it("should attempt coinbase (eth_coinbase)", async () => {
+    const client = new AvalancheClient(config);
+    const result = await client.coinbase();
+
+    if (result.success) {
+      assert.strictEqual(typeof result.data, "string", "Coinbase should be string");
+    }
+  });
+
+  it("should attempt protocol version (eth_protocolVersion)", async () => {
+    const client = new AvalancheClient(config);
+    const result = await client.protocolVersion();
+
+    if (result.success) {
+      assert.strictEqual(typeof result.data, "string", "Protocol version should be string");
     }
   });
 
@@ -424,6 +653,19 @@ describe("AvalancheClient - Block Methods", () => {
     const result = await client.getUncleByBlockNumberAndIndex("latest", "0x0");
 
     // Uncles are rare on Avalanche, so null is expected
+    assert.ok(result.success, "Should succeed");
+    if (result.data !== null) {
+      validateAvalancheBlock(result.data, false);
+    }
+  });
+
+  it("should get uncle by block hash and index (eth_getUncleByBlockHashAndIndex)", async () => {
+    const client = new AvalancheClient(config);
+    const latestResult = await client.getBlockByNumber("latest", false);
+    assert.ok(latestResult.data?.hash, "Should have block hash");
+
+    const result = await client.getUncleByBlockHashAndIndex(latestResult.data.hash, "0x0");
+
     assert.ok(result.success, "Should succeed");
     if (result.data !== null) {
       validateAvalancheBlock(result.data, false);
@@ -664,6 +906,7 @@ describe("AvalancheClient - Logs and Filters", () => {
 
     if (result.success) {
       assert.strictEqual(typeof result.data, "string", "Filter ID should be string");
+      assert.ok(isHexString(result.data as string), "Filter ID should be hex string");
     }
   });
 
@@ -795,6 +1038,18 @@ describe("AvalancheClient - Debug Methods", () => {
     assert.ok(result, "Should return a result");
   });
 
+  it("should attempt debug_traceChain", async () => {
+    const client = new AvalancheClient(config);
+    const result = await client.debugTraceChain("0x1", "0x2");
+    assert.ok(result, "Should return a result");
+  });
+
+  it("should attempt debug_traceBlockFromFile", async () => {
+    const client = new AvalancheClient(config);
+    const result = await client.debugTraceBlockFromFile("/nonexistent");
+    assert.ok(result, "Should return a result");
+  });
+
   it("should attempt debug_getBadBlocks", async () => {
     const client = new AvalancheClient(config);
     const result = await client.debugGetBadBlocks();
@@ -834,18 +1089,18 @@ describe("AvalancheClient - Debug Methods", () => {
     assert.ok(result, "Should return a result");
   });
 
-  it("should attempt debug_accountRange", async () => {
-    const client = new AvalancheClient(config);
-    const result = await client.debugAccountRange("latest", "0x0", 10);
-    assert.ok(result, "Should return a result");
-  });
-
   it("should attempt debug_intermediateRoots", async () => {
     const client = new AvalancheClient(config);
     const blockResult = await client.getBlockByNumber("latest", false);
     assert.ok(blockResult.data?.hash, "Should have block hash");
 
     const result = await client.debugIntermediateRoots(blockResult.data.hash);
+    assert.ok(result, "Should return a result");
+  });
+
+  it("should attempt debug_accountRange", async () => {
+    const client = new AvalancheClient(config);
+    const result = await client.debugAccountRange("latest", "0x0", 10);
     assert.ok(result, "Should return a result");
   });
 
@@ -873,6 +1128,12 @@ describe("AvalancheClient - Debug Methods", () => {
     }
   });
 
+  it("should attempt debug_setGCPercent", async () => {
+    const client = new AvalancheClient(config);
+    const result = await client.debugSetGCPercent(100);
+    assert.ok(result, "Should return a result");
+  });
+
   it("should attempt debug_metrics", async () => {
     const client = new AvalancheClient(config);
     const result = await client.debugMetrics();
@@ -880,6 +1141,12 @@ describe("AvalancheClient - Debug Methods", () => {
     if (result.success) {
       assert.strictEqual(typeof result.data, "object", "Metrics should be object");
     }
+  });
+
+  it("should attempt debug_verbosity", async () => {
+    const client = new AvalancheClient(config);
+    const result = await client.debugVerbosity(3);
+    assert.ok(result, "Should return a result");
   });
 });
 
@@ -889,7 +1156,7 @@ describe("AvalancheClient - Admin Methods", () => {
     const result = await client.adminNodeInfo();
 
     if (result.success) {
-      assert.strictEqual(typeof result.data, "object", "NodeInfo should be object");
+      validateAvalancheAdminNodeInfo(result.data);
     }
   });
 
@@ -899,6 +1166,9 @@ describe("AvalancheClient - Admin Methods", () => {
 
     if (result.success) {
       assert.ok(Array.isArray(result.data), "Peers should be array");
+      for (const peer of result.data as any[]) {
+        validateAvalancheAdminPeerInfo(peer);
+      }
     }
   });
 
@@ -920,6 +1190,13 @@ describe("AvalancheClient - Admin Methods", () => {
     }
   });
 
+  it("should attempt admin_alias (Avalanche-specific)", async () => {
+    const client = new AvalancheClient(config);
+    const result = await client.adminAlias("/ext/bc/C/rpc", "/ext/bc/C/avax");
+
+    assert.ok(result, "Should return a result");
+  });
+
   it("should attempt admin_getVMConfig (Avalanche-specific)", async () => {
     const client = new AvalancheClient(config);
     const result = await client.adminGetVMConfig();
@@ -938,9 +1215,7 @@ describe("AvalancheClient - Avalanche-Specific Methods (avax.*)", () => {
     );
 
     if (result.success) {
-      const status = result.data as any;
-      assert.ok("status" in status, "Should have status field");
-      assert.strictEqual(typeof status.status, "string", "status should be string");
+      validateAvaxAtomicTxStatus(result.data);
     }
   });
 
@@ -951,9 +1226,7 @@ describe("AvalancheClient - Avalanche-Specific Methods (avax.*)", () => {
     );
 
     if (result.success) {
-      const data = result.data as any;
-      assert.strictEqual(typeof data.tx, "string", "tx should be string");
-      assert.strictEqual(typeof data.encoding, "string", "encoding should be string");
+      validateAvaxAtomicTx(result.data);
     }
   });
 
@@ -962,9 +1235,7 @@ describe("AvalancheClient - Avalanche-Specific Methods (avax.*)", () => {
     const result = await client.avaxGetUTXOs([ZERO_ADDRESS], "X", 10);
 
     if (result.success) {
-      const data = result.data as any;
-      assert.ok(Array.isArray(data.utxos), "utxos should be array");
-      assert.strictEqual(typeof data.numFetched, "string", "numFetched should be string");
+      validateAvaxUTXOsResponse(result.data);
     }
   });
 
@@ -974,7 +1245,7 @@ describe("AvalancheClient - Avalanche-Specific Methods (avax.*)", () => {
 
     // Will fail with invalid tx, but verifies the call path
     if (result.success) {
-      assert.strictEqual(typeof (result.data as any).txID, "string", "txID should be string");
+      validateAvaxIssueTxResponse(result.data);
     }
   });
 
@@ -1028,6 +1299,34 @@ describe("AvalancheClient - Sign Methods", () => {
 
     if (result.success) {
       assert.strictEqual(typeof result.data, "string", "Signed tx should be string");
+    }
+  });
+
+  it("should attempt eth_signTypedData", async () => {
+    const client = new AvalancheClient(config);
+    const result = await client.signTypedData(ZERO_ADDRESS, {
+      types: { EIP712Domain: [] },
+      primaryType: "EIP712Domain",
+      domain: {},
+      message: {},
+    });
+
+    if (result.success) {
+      assert.strictEqual(typeof result.data, "string", "Signature should be string");
+    }
+  });
+
+  it("should attempt eth_signTypedData_v4", async () => {
+    const client = new AvalancheClient(config);
+    const result = await client.signTypedDataV4(ZERO_ADDRESS, {
+      types: { EIP712Domain: [] },
+      primaryType: "EIP712Domain",
+      domain: {},
+      message: {},
+    });
+
+    if (result.success) {
+      assert.strictEqual(typeof result.data, "string", "Signature should be string");
     }
   });
 
