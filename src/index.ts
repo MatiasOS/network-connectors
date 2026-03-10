@@ -117,6 +117,33 @@ export type {
   AccessListEntry as BaseAccessListEntry,
 } from "./networks/8453/BaseTypes.js";
 
+// Avalanche C-Chain (Chain ID: 43114)
+export { AvalancheClient } from "./networks/43114/AvalancheClient.js";
+export type {
+  AvalancheBlock,
+  AvalancheTransaction,
+  AvalancheTransactionReceipt,
+  AvalancheLog,
+  AvalancheLogFilter,
+  AvalancheCallObject,
+  AvalancheWithdrawal,
+  AvalancheSyncingStatus,
+  AvalancheChainConfig,
+  AvalancheCallDetailedResult,
+  AvalancheBadBlock,
+  AvalancheSuggestPriceOptions,
+  AvalanchePriceTier,
+  AvalancheWarpSignedMessage,
+  AvalancheVMConfig,
+  AvalancheGetUTXOsResponse,
+  AvalancheUTXOIndex,
+  AvalancheAtomicTxStatus,
+  AvalancheAtomicTx,
+  BlockNumberOrTag as AvalancheBlockNumberOrTag,
+  BlockTag as AvalancheBlockTag,
+  AccessListEntry as AvalancheAccessListEntry,
+} from "./networks/43114/AvalancheTypes.js";
+
 // Arbitrum (Chain ID: 42161)
 export { ArbitrumClient } from "./networks/42161/ArbitrumClient.js";
 export type {

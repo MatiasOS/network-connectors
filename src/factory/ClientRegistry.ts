@@ -6,6 +6,7 @@ import { BNBClient } from "../networks/56/BNBClient.js";
 import { PolygonClient } from "../networks/137/PolygonClient.js";
 import { BaseClient } from "../networks/8453/BaseClient.js";
 import { ArbitrumClient } from "../networks/42161/ArbitrumClient.js";
+import { AvalancheClient } from "../networks/43114/AvalancheClient.js";
 import { AztecClient } from "../networks/677868/AztecClient.js";
 import { SepoliaClient } from "../networks/11155111/SepoliaClient.js";
 import { BitcoinClient } from "../networks/bitcoin/BitcoinClient.js";
@@ -20,7 +21,18 @@ import {
 /**
  * Supported EVM chain IDs for the client factory
  */
-export type SupportedChainId = 1 | 10 | 56 | 97 | 137 | 8453 | 42161 | 677868 | 31337 | 11155111;
+export type SupportedChainId =
+  | 1
+  | 10
+  | 56
+  | 97
+  | 137
+  | 8453
+  | 42161
+  | 43114
+  | 677868
+  | 31337
+  | 11155111;
 
 /**
  * Supported Bitcoin chain IDs (CAIP-2 format with BIP122 namespace)
@@ -52,9 +64,11 @@ export type ChainIdToClient<T extends SupportedChainId> = T extends 1 | 31337 | 
           ? BaseClient
           : T extends 42161
             ? ArbitrumClient
-            : T extends 677868
-              ? AztecClient
-              : NetworkClient;
+            : T extends 43114
+              ? AvalancheClient
+              : T extends 677868
+                ? AztecClient
+                : NetworkClient;
 
 /**
  * Map any network identifier to its specific client type
@@ -76,6 +90,7 @@ const CHAIN_REGISTRY: Record<SupportedChainId, ClientConstructor> = {
   137: PolygonClient,
   8453: BaseClient,
   42161: ArbitrumClient,
+  43114: AvalancheClient,
   677868: AztecClient,
   31337: EthereumClient, // Hardhat local network mapped to EthereumClient
   11155111: SepoliaClient, // Sepolia testnet mapped to EthereumClient
@@ -131,6 +146,10 @@ export class ClientFactory {
    * Create an Arbitrum client
    */
   static createClient(chainId: 42161, config: StrategyConfig): ArbitrumClient;
+  /**
+   * Create an Avalanche C-Chain client
+   */
+  static createClient(chainId: 43114, config: StrategyConfig): AvalancheClient;
   /**
    * Create an Aztec client
    */
