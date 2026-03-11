@@ -1,6 +1,7 @@
+import type { JsonRpcTransport } from "./JsonRpcTransport.js";
 import type { JsonRpcRequest, JsonRpcResponse } from "./RpcClientTypes.js";
 
-export class RpcClient {
+export class RpcClient implements JsonRpcTransport {
   private url: string;
   private requestId: number = 0;
 

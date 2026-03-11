@@ -4,11 +4,11 @@ import type {
   RPCProviderResponse,
   RPCMetadata,
 } from "./strategiesTypes.js";
-import type { RpcClient } from "../RpcClient.js";
+import type { JsonRpcTransport } from "../JsonRpcTransport.js";
 
 export class FallbackStrategy implements RequestStrategy {
-  private rpcClients: RpcClient[];
-  constructor(rpcClients: RpcClient[]) {
+  private rpcClients: JsonRpcTransport[];
+  constructor(rpcClients: JsonRpcTransport[]) {
     if (rpcClients.length === 0) {
       throw new Error("At least one RPC client must be provided");
     }
@@ -80,5 +80,9 @@ export class FallbackStrategy implements RequestStrategy {
 
   getName(): string {
     return "fallback";
+  }
+
+  async close(): Promise<void> {
+    await Promise.all(this.rpcClients.map((client) => client.close?.()));
   }
 }
