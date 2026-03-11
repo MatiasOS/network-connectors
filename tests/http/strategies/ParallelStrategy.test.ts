@@ -2,8 +2,12 @@ import { describe, it } from "node:test";
 import assert from "node:assert";
 import { ParallelStrategy } from "../../../src/strategies/parallelStrategy.js";
 import { RpcClient } from "../../../src/RpcClient.js";
+import { getTestUrls } from "../../helpers/env.js";
 
-const TEST_URLS = ["https://eth.merkle.io", "https://ethereum.publicnode.com"];
+const TEST_URLS = getTestUrls("eth-mainnet", [
+  "https://eth.merkle.io",
+  "https://ethereum.publicnode.com",
+]);
 
 describe("ParallelStrategy - Constructor", () => {
   it("should create ParallelStrategy with RPC clients", () => {

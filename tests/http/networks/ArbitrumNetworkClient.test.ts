@@ -12,8 +12,12 @@ import {
   validateFailureResult,
   isHexString,
 } from "../../helpers/validators.js";
+import { getTestUrls } from "../../helpers/env.js";
 
-const TEST_URLS = ["https://arb-one.api.pocket.network", "https://arbitrum.meowrpc.com"];
+const TEST_URLS = getTestUrls("arb-mainnet", [
+  "https://arb-one.api.pocket.network",
+  "https://arbitrum.meowrpc.com",
+]);
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 

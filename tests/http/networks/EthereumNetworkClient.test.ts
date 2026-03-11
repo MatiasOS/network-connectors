@@ -13,8 +13,12 @@ import {
   validateFailureResult,
   isHexString,
 } from "../../helpers/validators.js";
+import { getTestUrls } from "../../helpers/env.js";
 
-const TEST_URLS = ["https://eth.merkle.io", "https://ethereum.publicnode.com"];
+const TEST_URLS = getTestUrls("eth-mainnet", [
+  "https://eth.merkle.io",
+  "https://ethereum.publicnode.com",
+]);
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 

@@ -3,8 +3,12 @@ import assert from "node:assert";
 import { RaceStrategy } from "../../../src/strategies/raceStrategy.js";
 import { RpcClient } from "../../../src/RpcClient.js";
 import { isHexString, validateRaceMetadata } from "../../helpers/validators.js";
+import { getTestUrls } from "../../helpers/env.js";
 
-const TEST_URLS = ["https://eth.merkle.io", "https://ethereum.publicnode.com"];
+const TEST_URLS = getTestUrls("eth-mainnet", [
+  "https://eth.merkle.io",
+  "https://ethereum.publicnode.com",
+]);
 
 describe("RaceStrategy - Constructor", () => {
   it("should create RaceStrategy with RPC clients", () => {

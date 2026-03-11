@@ -9,8 +9,12 @@ import {
   validateTransaction,
   isHexString,
 } from "../../helpers/validators.js";
+import { getTestUrls } from "../../helpers/env.js";
 
-const TEST_URLS = ["https://base.api.pocket.network", "https://base.drpc.org"];
+const TEST_URLS = getTestUrls("base-mainnet", [
+  "https://base.api.pocket.network",
+  "https://base.drpc.org",
+]);
 
 describe("BaseNetworkClient - Block Methods", () => {
   const config: StrategyConfig = {

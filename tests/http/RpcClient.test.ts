@@ -2,8 +2,12 @@ import { describe, it } from "node:test";
 import assert from "node:assert";
 import { RpcClient } from "../../src/RpcClient.js";
 import { isHexString } from "../helpers/validators.js";
+import { getTestUrls } from "../helpers/env.js";
 
-const TEST_URLS: string[] = ["https://eth.merkle.io", "https://ethereum.publicnode.com"];
+const TEST_URLS: string[] = getTestUrls("eth-mainnet", [
+  "https://eth.merkle.io",
+  "https://ethereum.publicnode.com",
+]);
 
 describe("RpcClient - Constructor and Basic Properties", () => {
   it("should create RpcClient with url and name", () => {

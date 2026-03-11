@@ -9,12 +9,13 @@ import {
   isHexString,
   isAddress,
 } from "../../helpers/validators.js";
+import { getTestUrls } from "../../helpers/env.js";
 
-const TEST_URLS = [
+const TEST_URLS = getTestUrls("avax-mainnet", [
   "https://api.avax.network/ext/bc/C/rpc",
   "https://avalanche.public-rpc.com",
   "https://rpc.ankr.com/avalanche",
-];
+]);
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 

@@ -33,6 +33,7 @@ import type {
 } from "../../../src/networks/bitcoin/BitcoinTypes.js";
 import { ClientFactory } from "../../../src/factory/ClientRegistry.js";
 import type { StrategyConfig } from "../../../src/strategies/requestStrategy.js";
+import { getTestUrls } from "../../helpers/env.js";
 
 /**
  * Validates that a value is a non-null object
@@ -506,10 +507,10 @@ function validateBtcIndexInfo(data: unknown): asserts data is BtcIndexInfo {
   }
 }
 
-const TEST_URLS = [
+const TEST_URLS = getTestUrls("bitcoin-mainnet", [
   "https://bitcoin-rpc.publicnode.com",
   "https://bitcoin-mainnet.gateway.tatum.io/",
-];
+]);
 
 describe("BitcoinClient - CAIP-2 Chain ID Constants", () => {
   it("should have correct BITCOIN_MAINNET chain ID", () => {

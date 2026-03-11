@@ -9,8 +9,12 @@ import {
   validateTransaction,
   isHexString,
 } from "../../helpers/validators.js";
+import { getTestUrls } from "../../helpers/env.js";
 
-const TEST_URLS = ["https://binance.llamarpc.com", "wss://bsc-rpc.publicnode.com"];
+const TEST_URLS = getTestUrls("bnb-mainnet", [
+  "https://binance.llamarpc.com",
+  "wss://bsc-rpc.publicnode.com",
+]);
 
 describe("BNBNetworkClient - Block Methods", () => {
   const config: StrategyConfig = {

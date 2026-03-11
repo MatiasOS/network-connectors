@@ -3,8 +3,12 @@ import assert from "node:assert";
 import { NetworkClient } from "../../src/NetworkClient.js";
 import type { StrategyConfig } from "../../src/strategies/requestStrategy.js";
 import { isHexString } from "../helpers/validators.js";
+import { getTestUrls } from "../helpers/env.js";
 
-const TEST_URLS = ["https://eth.merkle.io", "https://ethereum.publicnode.com"];
+const TEST_URLS = getTestUrls("eth-mainnet", [
+  "https://eth.merkle.io",
+  "https://ethereum.publicnode.com",
+]);
 
 describe("NetworkClient - Constructor and Strategy", () => {
   it("should create NetworkClient with fallback strategy", () => {

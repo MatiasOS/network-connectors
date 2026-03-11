@@ -9,8 +9,12 @@ import {
   validateTransaction,
   isHexString,
 } from "../../helpers/validators.js";
+import { getTestUrls } from "../../helpers/env.js";
 
-const TEST_URLS = ["https://ethereum-sepolia-rpc.publicnode.com", "https://0xrpc.io/sep"];
+const TEST_URLS = getTestUrls("eth-sepolia", [
+  "https://ethereum-sepolia-rpc.publicnode.com",
+  "https://0xrpc.io/sep",
+]);
 
 describe("SepoliaNetworkClient - Block Methods", () => {
   const config: StrategyConfig = {

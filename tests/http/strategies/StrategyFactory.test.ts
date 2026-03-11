@@ -4,8 +4,12 @@ import { StrategyFactory } from "../../../src/strategies/requestStrategy.js";
 import { FallbackStrategy } from "../../../src/strategies/fallbackStrategy.js";
 import { ParallelStrategy } from "../../../src/strategies/parallelStrategy.js";
 import type { StrategyConfig } from "../../../src/strategies/requestStrategy.js";
+import { getTestUrls } from "../../helpers/env.js";
 
-const TEST_URLS = ["https://eth.merkle.io", "https://ethereum.publicnode.com"];
+const TEST_URLS = getTestUrls("eth-mainnet", [
+  "https://eth.merkle.io",
+  "https://ethereum.publicnode.com",
+]);
 
 describe("StrategyFactory - Creation", () => {
   it("should create FallbackStrategy with fallback type", () => {

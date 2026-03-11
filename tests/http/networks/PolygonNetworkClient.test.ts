@@ -14,8 +14,12 @@ import {
   isHexString,
   isAddress,
 } from "../../helpers/validators.js";
+import { getTestUrls } from "../../helpers/env.js";
 
-const TEST_URLS = ["https://poly.api.pocket.network", "https://polygon-bor-rpc.publicnode.com"];
+const TEST_URLS = getTestUrls("matic-mainnet", [
+  "https://poly.api.pocket.network",
+  "https://polygon-bor-rpc.publicnode.com",
+]);
 
 // Known transaction hash with logs
 const TEST_TX_HASH = "0xa871c9e4d142905427f4c5eb2664b4840ef8a007c9f263aed6f6c64eeae71540";
