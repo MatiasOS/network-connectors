@@ -4,9 +4,10 @@ import { RpcClient } from "../../src/RpcClient.js";
 import { WebSocketRpcClient } from "../../src/WebSocketRpcClient.js";
 import type { JsonRpcTransport } from "../../src/JsonRpcTransport.js";
 import { isHexString } from "../helpers/validators.js";
+import { getTestUrls, getTestWsUrls } from "../helpers/env.js";
 
-const HTTP_URL = "https://ethereum.publicnode.com";
-const WS_URL = "wss://ethereum.publicnode.com";
+const HTTP_URL = getTestUrls("eth-mainnet", ["https://ethereum.publicnode.com"])[0];
+const WS_URL = getTestWsUrls("eth-mainnet", ["wss://ethereum.publicnode.com"])[0];
 
 describe("JsonRpcTransport - Interface Contract", () => {
   it("should verify RpcClient satisfies JsonRpcTransport interface", () => {

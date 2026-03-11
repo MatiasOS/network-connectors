@@ -2,8 +2,13 @@ import { describe, it } from "node:test";
 import assert from "node:assert";
 import { EthereumClient } from "../../../../src/networks/1/EthereumClient.js";
 import { isHexString, validateBlock } from "../../../helpers/validators.js";
+import { getTestWsUrls } from "../../../helpers/env.js";
 
-const WS_URLS = ["wss://ethereum.publicnode.com"];
+const WS_URLS = getTestWsUrls("eth-mainnet", ["wss://ethereum.publicnode.com"]);
+const WS_URLS_MULTI = getTestWsUrls("eth-mainnet", [
+  "wss://ethereum-rpc.publicnode.com",
+  "wss://ethereum.publicnode.com",
+]);
 
 describe("EthereumClient (WebSocket) - Basic Methods [strong]", () => {
   it("should get chain ID over WebSocket", async () => {
@@ -59,7 +64,7 @@ describe("EthereumClient (WebSocket) - Strategy Types [strong]", () => {
   it("should work with race strategy over WebSocket", async () => {
     const client = new EthereumClient({
       type: "race",
-      rpcUrls: ["wss://ethereum-rpc.publicnode.com", "wss://ethereum.publicnode.com"],
+      rpcUrls: WS_URLS_MULTI,
     });
 
     const result = await client.chainId();
@@ -73,7 +78,7 @@ describe("EthereumClient (WebSocket) - Strategy Types [strong]", () => {
   it("should work with parallel strategy over WebSocket", async () => {
     const client = new EthereumClient({
       type: "parallel",
-      rpcUrls: ["wss://ethereum-rpc.publicnode.com", "wss://ethereum.publicnode.com"],
+      rpcUrls: WS_URLS_MULTI,
     });
 
     const result = await client.chainId();

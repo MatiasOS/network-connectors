@@ -2,8 +2,10 @@ import { describe, it } from "node:test";
 import assert from "node:assert";
 import { WebSocketRpcClient } from "../../src/WebSocketRpcClient.js";
 import { isHexString } from "../helpers/validators.js";
+import { getTestWsUrls } from "../helpers/env.js";
 
-const WS_URL = "wss://ethereum.publicnode.com";
+const WS_URLS = getTestWsUrls("eth-mainnet", ["wss://ethereum.publicnode.com"]);
+const WS_URL = WS_URLS[0];
 
 describe("WebSocketRpcClient - Constructor", () => {
   it("should create client with URL", () => {

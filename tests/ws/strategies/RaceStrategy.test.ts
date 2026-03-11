@@ -3,8 +3,12 @@ import assert from "node:assert";
 import { RaceStrategy } from "../../../src/strategies/raceStrategy.js";
 import { WebSocketRpcClient } from "../../../src/WebSocketRpcClient.js";
 import { isHexString, validateRaceMetadata } from "../../helpers/validators.js";
+import { getTestWsUrls } from "../../helpers/env.js";
 
-const WS_URLS = ["wss://ethereum-rpc.publicnode.com", "wss://ethereum.publicnode.com"];
+const WS_URLS = getTestWsUrls("eth-mainnet", [
+  "wss://ethereum-rpc.publicnode.com",
+  "wss://ethereum.publicnode.com",
+]);
 
 describe("RaceStrategy (WebSocket) - Execute [strong]", () => {
   it("should execute eth_chainId as race over WebSocket", async () => {

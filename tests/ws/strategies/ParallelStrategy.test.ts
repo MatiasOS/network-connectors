@@ -7,8 +7,12 @@ import {
   validateParallelMetadata,
   validateResponseDetails,
 } from "../../helpers/validators.js";
+import { getTestWsUrls } from "../../helpers/env.js";
 
-const WS_URLS = ["wss://ethereum-rpc.publicnode.com", "wss://ethereum.publicnode.com"];
+const WS_URLS = getTestWsUrls("eth-mainnet", [
+  "wss://ethereum-rpc.publicnode.com",
+  "wss://ethereum.publicnode.com",
+]);
 
 describe("ParallelStrategy (WebSocket) - Execute [strong]", () => {
   it("should execute eth_chainId in parallel over WebSocket", async () => {

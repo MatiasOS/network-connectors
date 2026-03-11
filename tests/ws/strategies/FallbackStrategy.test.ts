@@ -7,8 +7,10 @@ import {
   validateFallbackMetadata,
   validateResponseDetails,
 } from "../../helpers/validators.js";
+import { getTestUrls, getTestWsUrls } from "../../helpers/env.js";
 
-const WS_URLS = ["wss://ethereum.publicnode.com"];
+const WS_URLS = getTestWsUrls("eth-mainnet", ["wss://ethereum.publicnode.com"]);
+const HTTP_URLS = getTestUrls("eth-mainnet", ["https://ethereum.publicnode.com"]);
 
 describe("FallbackStrategy (WebSocket) - Constructor", () => {
   it("should create FallbackStrategy with WebSocket clients", () => {
@@ -58,10 +60,7 @@ describe("FallbackStrategy (WebSocket) - Execute [strong]", () => {
 describe("FallbackStrategy (WebSocket) - Mixed Transports [strong]", () => {
   it("should work with mixed HTTP and WebSocket clients", async () => {
     const { RpcClient } = await import("../../../src/RpcClient.js");
-    const clients = [
-      new RpcClient("https://ethereum.publicnode.com"),
-      new WebSocketRpcClient(WS_URLS[0]),
-    ];
+    const clients = [new RpcClient(HTTP_URLS[0]), new WebSocketRpcClient(WS_URLS[0])];
     const strategy = new FallbackStrategy(clients);
 
     const result = await strategy.execute<string>("eth_chainId", []);

@@ -26,3 +26,10 @@ export function getTestUrls(network: string, baseUrls: string[]): string[] {
   if (!subdomain) return baseUrls;
   return [...baseUrls, `https://${subdomain}.g.alchemy.com/v2/${ALCHEMY_API_KEY}`];
 }
+
+export function getTestWsUrls(network: string, baseUrls: string[]): string[] {
+  if (!ALCHEMY_API_KEY) return baseUrls;
+  const subdomain = ALCHEMY_NETWORKS[network];
+  if (!subdomain) return baseUrls;
+  return [...baseUrls, `wss://${subdomain}.g.alchemy.com/v2/${ALCHEMY_API_KEY}`];
+}
