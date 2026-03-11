@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { EthereumClient } from "../../src/networks/1/EthereumClient.js";
-import type { StrategyConfig } from "../../src/strategies/requestStrategy.js";
+import { EthereumClient } from "../../../src/networks/1/EthereumClient.js";
+import type { StrategyConfig } from "../../../src/strategies/requestStrategy.js";
 import {
   validateObject,
   validateBlock,
@@ -12,7 +12,7 @@ import {
   validateFeeHistory,
   validateFailureResult,
   isHexString,
-} from "../helpers/validators.js";
+} from "../../helpers/validators.js";
 
 const TEST_URLS = ["https://eth.merkle.io", "https://ethereum.publicnode.com"];
 

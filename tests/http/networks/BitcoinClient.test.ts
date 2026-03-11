@@ -1,12 +1,12 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { BitcoinClient } from "../../src/networks/bitcoin/BitcoinClient.js";
+import { BitcoinClient } from "../../../src/networks/bitcoin/BitcoinClient.js";
 import {
   BITCOIN_MAINNET,
   BITCOIN_TESTNET3,
   BITCOIN_TESTNET4,
   BITCOIN_SIGNET,
-} from "../../src/networks/bitcoin/BitcoinTypes.js";
+} from "../../../src/networks/bitcoin/BitcoinTypes.js";
 import type {
   BtcBlockchainInfo,
   BtcBlock,
@@ -30,9 +30,9 @@ import type {
   BtcScriptPubKey,
   BtcVin,
   BtcVout,
-} from "../../src/networks/bitcoin/BitcoinTypes.js";
-import { ClientFactory } from "../../src/factory/ClientRegistry.js";
-import type { StrategyConfig } from "../../src/strategies/requestStrategy.js";
+} from "../../../src/networks/bitcoin/BitcoinTypes.js";
+import { ClientFactory } from "../../../src/factory/ClientRegistry.js";
+import type { StrategyConfig } from "../../../src/strategies/requestStrategy.js";
 
 /**
  * Validates that a value is a non-null object

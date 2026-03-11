@@ -1,14 +1,14 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { BaseClient } from "../../src/networks/8453/BaseClient.js";
-import type { StrategyConfig } from "../../src/strategies/requestStrategy.js";
+import { BaseClient } from "../../../src/networks/8453/BaseClient.js";
+import type { StrategyConfig } from "../../../src/strategies/requestStrategy.js";
 import {
   validateObject,
   validateBlock,
   validateSuccessResult,
   validateTransaction,
   isHexString,
-} from "../helpers/validators.js";
+} from "../../helpers/validators.js";
 
 const TEST_URLS = ["https://base.api.pocket.network", "https://base.drpc.org"];
 

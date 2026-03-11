@@ -1,28 +1,24 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { FallbackStrategy } from "../../src/strategies/fallbackStrategy.js";
-import { RpcClient } from "../../src/RpcClient.js";
-import {
-  isHexString,
-  validateFallbackMetadata,
-  validateResponseDetails,
-} from "../helpers/validators.js";
+import { RaceStrategy } from "../../../src/strategies/raceStrategy.js";
+import { RpcClient } from "../../../src/RpcClient.js";
+import { isHexString, validateRaceMetadata } from "../../helpers/validators.js";
 
 const TEST_URLS = ["https://eth.merkle.io", "https://ethereum.publicnode.com"];
 
-describe("FallbackStrategy - Constructor", () => {
-  it("should create FallbackStrategy with RPC clients", () => {
+describe("RaceStrategy - Constructor", () => {
+  it("should create RaceStrategy with RPC clients", () => {
     const clients = TEST_URLS.map((url) => new RpcClient(url));
-    const strategy = new FallbackStrategy(clients);
+    const strategy = new RaceStrategy(clients);
 
     assert.ok(strategy, "Strategy should be created");
-    assert.strictEqual(strategy.getName(), "fallback", "Strategy name should be fallback");
+    assert.strictEqual(strategy.getName(), "race", "Strategy name should be race");
   });
 
   it("should throw error with empty clients array", () => {
     assert.throws(
       () => {
-        new FallbackStrategy([]);
+        new RaceStrategy([]);
       },
       /at least one RPC client/i,
       "Should throw error for empty clients",
@@ -31,16 +27,16 @@ describe("FallbackStrategy - Constructor", () => {
 
   it("should accept single RPC client", () => {
     const clients = [new RpcClient(TEST_URLS[0])];
-    const strategy = new FallbackStrategy(clients);
+    const strategy = new RaceStrategy(clients);
 
     assert.ok(strategy, "Should accept single client");
   });
 });
 
-describe("FallbackStrategy - Execute Success", () => {
+describe("RaceStrategy - Execute Success", () => {
   it("should execute eth_chainId successfully", async () => {
     const clients = TEST_URLS.map((url) => new RpcClient(url));
-    const strategy = new FallbackStrategy(clients);
+    const strategy = new RaceStrategy(clients);
 
     const result = await strategy.execute<string>("eth_chainId", []);
 
@@ -48,12 +44,12 @@ describe("FallbackStrategy - Execute Success", () => {
     assert.ok(result.data, "Result should have data");
     assert.ok(isHexString(result.data), "chainId should be hex string");
     assert.ok(result.metadata, "Should have metadata");
-    assert.strictEqual(result.metadata.strategy, "fallback", "Strategy should be fallback");
+    assert.strictEqual(result.metadata.strategy, "race", "Strategy should be race");
   });
 
   it("should execute eth_blockNumber successfully", async () => {
     const clients = TEST_URLS.map((url) => new RpcClient(url));
-    const strategy = new FallbackStrategy(clients);
+    const strategy = new RaceStrategy(clients);
 
     const result = await strategy.execute<string>("eth_blockNumber", []);
 
@@ -64,7 +60,7 @@ describe("FallbackStrategy - Execute Success", () => {
 
   it("should execute eth_gasPrice successfully", async () => {
     const clients = TEST_URLS.map((url) => new RpcClient(url));
-    const strategy = new FallbackStrategy(clients);
+    const strategy = new RaceStrategy(clients);
 
     const result = await strategy.execute<string>("eth_gasPrice", []);
 
@@ -75,7 +71,7 @@ describe("FallbackStrategy - Execute Success", () => {
 
   it("should execute eth_getBlockByNumber with params", async () => {
     const clients = TEST_URLS.map((url) => new RpcClient(url));
-    const strategy = new FallbackStrategy(clients);
+    const strategy = new RaceStrategy(clients);
 
     const result = await strategy.execute<any>("eth_getBlockByNumber", ["latest", false]);
 
@@ -86,28 +82,28 @@ describe("FallbackStrategy - Execute Success", () => {
   });
 });
 
-describe("FallbackStrategy - Fallback Behavior", () => {
-  it("should fallback to second provider when first fails", async () => {
+describe("RaceStrategy - Race Behavior", () => {
+  it("should succeed if at least one provider works (first invalid)", async () => {
     const clients = [
       new RpcClient("https://invalid-url-12345.com"),
       ...TEST_URLS.map((url) => new RpcClient(url)),
     ];
-    const strategy = new FallbackStrategy(clients);
+    const strategy = new RaceStrategy(clients);
 
     const result = await strategy.execute<string>("eth_chainId", []);
 
-    assert.strictEqual(result.success, true, "Should succeed with fallback");
-    assert.ok(result.data, "Should have data from fallback provider");
+    assert.strictEqual(result.success, true, "Should succeed with race");
+    assert.ok(result.data, "Should have data from working provider");
     assert.ok(isHexString(result.data), "chainId should be hex string");
   });
 
-  it("should try all providers until one succeeds", async () => {
+  it("should succeed if at least one provider works (multiple invalid)", async () => {
     const clients = [
       new RpcClient("https://invalid-url-1.com"),
       new RpcClient("https://invalid-url-2.com"),
       ...TEST_URLS.map((url) => new RpcClient(url)),
     ];
-    const strategy = new FallbackStrategy(clients);
+    const strategy = new RaceStrategy(clients);
 
     const result = await strategy.execute<string>("eth_blockNumber", []);
 
@@ -120,7 +116,7 @@ describe("FallbackStrategy - Fallback Behavior", () => {
       new RpcClient("https://invalid-url-1.com"),
       new RpcClient("https://invalid-url-2.com"),
     ];
-    const strategy = new FallbackStrategy(clients);
+    const strategy = new RaceStrategy(clients);
 
     const result = await strategy.execute<string>("eth_chainId", []);
 
@@ -138,27 +134,13 @@ describe("FallbackStrategy - Fallback Behavior", () => {
   });
 });
 
-describe("FallbackStrategy - Error Details", () => {
-  it("should capture error details for failed providers", async () => {
-    const clients = [
-      new RpcClient("https://invalid-url-12345.com"),
-      ...TEST_URLS.map((url) => new RpcClient(url)),
-    ];
-    const strategy = new FallbackStrategy(clients);
-
-    const result = await strategy.execute<string>("eth_chainId", []);
-
-    // Even though it succeeds, we don't get error details in fallback mode
-    // because it stops on first success
-    assert.strictEqual(result.success, true, "Should succeed");
-  });
-
+describe("RaceStrategy - Error Details", () => {
   it("should include response times in error objects", async () => {
     const clients = [
       new RpcClient("https://invalid-url-1.com"),
       new RpcClient("https://invalid-url-2.com"),
     ];
-    const strategy = new FallbackStrategy(clients);
+    const strategy = new RaceStrategy(clients);
 
     const result = await strategy.execute<string>("eth_chainId", []);
 
@@ -172,11 +154,11 @@ describe("FallbackStrategy - Error Details", () => {
   });
 });
 
-describe("FallbackStrategy - Different RPC Methods", () => {
+describe("RaceStrategy - Different RPC Methods", () => {
   const clients = TEST_URLS.map((url) => new RpcClient(url));
 
   it("should handle eth_getBalance", async () => {
-    const strategy = new FallbackStrategy(clients);
+    const strategy = new RaceStrategy(clients);
     const zeroAddress = "0x0000000000000000000000000000000000000000";
     const result = await strategy.execute<string>("eth_getBalance", [zeroAddress, "latest"]);
 
@@ -186,7 +168,7 @@ describe("FallbackStrategy - Different RPC Methods", () => {
   });
 
   it("should handle eth_getCode", async () => {
-    const strategy = new FallbackStrategy(clients);
+    const strategy = new RaceStrategy(clients);
     const zeroAddress = "0x0000000000000000000000000000000000000000";
     const result = await strategy.execute<string>("eth_getCode", [zeroAddress, "latest"]);
 
@@ -196,7 +178,7 @@ describe("FallbackStrategy - Different RPC Methods", () => {
   });
 
   it("should handle eth_getLogs", async () => {
-    const strategy = new FallbackStrategy(clients);
+    const strategy = new RaceStrategy(clients);
     const result = await strategy.execute<any[]>("eth_getLogs", [
       { fromBlock: "latest", toBlock: "latest" },
     ]);
@@ -206,7 +188,7 @@ describe("FallbackStrategy - Different RPC Methods", () => {
   });
 
   it("should handle invalid method", async () => {
-    const strategy = new FallbackStrategy(clients);
+    const strategy = new RaceStrategy(clients);
     const result = await strategy.execute<string>("invalid_method", []);
 
     assert.strictEqual(result.success, false, "Should fail for invalid method");
@@ -214,38 +196,36 @@ describe("FallbackStrategy - Different RPC Methods", () => {
   });
 });
 
-describe("FallbackStrategy - Metadata", () => {
+describe("RaceStrategy - Metadata", () => {
   it("should return metadata on success", async () => {
     const clients = TEST_URLS.map((url) => new RpcClient(url));
-    const strategy = new FallbackStrategy(clients);
+    const strategy = new RaceStrategy(clients);
 
     const result = await strategy.execute<string>("eth_chainId", []);
 
     assert.strictEqual(result.success, true, "Should succeed");
-    validateFallbackMetadata(result, 1);
-    validateResponseDetails(result.metadata!.responses, false);
+    validateRaceMetadata(result, 1);
 
-    // Verify successful response has data
-    assert.strictEqual(result.metadata!.responses[0].status, "success");
-    assert.ok(result.metadata!.responses[0].data !== undefined, "Should have data in response");
+    // Verify at least one successful response
+    const successResponses = result.metadata!.responses.filter((r) => r.status === "success");
+    assert.ok(successResponses.length >= 1, "Should have at least one successful response");
   });
 
-  it("should track all failed attempts before success in metadata", async () => {
+  it("should track errors in metadata even on success", async () => {
     const clients = [
       new RpcClient("https://invalid-url-12345.com"),
       ...TEST_URLS.map((url) => new RpcClient(url)),
     ];
-    const strategy = new FallbackStrategy(clients);
+    const strategy = new RaceStrategy(clients);
 
     const result = await strategy.execute<string>("eth_chainId", []);
 
-    assert.strictEqual(result.success, true, "Should succeed with fallback");
-    validateFallbackMetadata(result, 2);
-    validateResponseDetails(result.metadata!.responses, false);
+    assert.strictEqual(result.success, true, "Should succeed with race");
+    validateRaceMetadata(result, 1);
 
-    // Verify order: first failed, second succeeded
-    assert.strictEqual(result.metadata!.responses[0].status, "error");
-    assert.strictEqual(result.metadata!.responses[1].status, "success");
+    // Should have at least the winning response
+    const successResponses = result.metadata!.responses.filter((r) => r.status === "success");
+    assert.ok(successResponses.length >= 1, "Should have winning response in metadata");
   });
 
   it("should return metadata on total failure", async () => {
@@ -253,13 +233,12 @@ describe("FallbackStrategy - Metadata", () => {
       new RpcClient("https://invalid-url-1.com"),
       new RpcClient("https://invalid-url-2.com"),
     ];
-    const strategy = new FallbackStrategy(clients);
+    const strategy = new RaceStrategy(clients);
 
     const result = await strategy.execute<string>("eth_chainId", []);
 
     assert.strictEqual(result.success, false, "Should fail");
-    validateFallbackMetadata(result, 2);
-    validateResponseDetails(result.metadata!.responses, false);
+    validateRaceMetadata(result, 2);
 
     // All responses should be errors
     for (const response of result.metadata!.responses) {
@@ -267,37 +246,39 @@ describe("FallbackStrategy - Metadata", () => {
     }
   });
 
-  it("should track response times for all attempts", async () => {
+  it("should have hasInconsistencies always false (race does not compare)", async () => {
+    const clients = TEST_URLS.map((url) => new RpcClient(url));
+    const strategy = new RaceStrategy(clients);
+
+    const result = await strategy.execute<string>("eth_chainId", []);
+
+    assert.strictEqual(result.success, true, "Should succeed");
+    assert.strictEqual(
+      result.metadata!.hasInconsistencies,
+      false,
+      "Race strategy should not detect inconsistencies",
+    );
+  });
+});
+
+describe("RaceStrategy - Performance Characteristics", () => {
+  it("should return faster than sequential fallback (conceptual test)", async () => {
+    // This test verifies the race strategy doesn't wait for all requests
+    // by mixing fast and slow (invalid) providers
     const clients = [
-      new RpcClient("https://invalid-url-12345.com"),
+      new RpcClient("https://invalid-url-slow.com"),
       ...TEST_URLS.map((url) => new RpcClient(url)),
     ];
-    const strategy = new FallbackStrategy(clients);
+    const strategy = new RaceStrategy(clients);
 
+    const startTime = Date.now();
     const result = await strategy.execute<string>("eth_chainId", []);
+    const duration = Date.now() - startTime;
 
     assert.strictEqual(result.success, true, "Should succeed");
-    validateFallbackMetadata(result);
-    validateResponseDetails(result.metadata!.responses, false);
-  });
-
-  it("should preserve attempt order in responses", async () => {
-    const invalidUrl = "https://invalid-url-order-test.com";
-    const clients = [new RpcClient(invalidUrl), ...TEST_URLS.map((url) => new RpcClient(url))];
-    const strategy = new FallbackStrategy(clients);
-
-    const result = await strategy.execute<string>("eth_chainId", []);
-
-    assert.strictEqual(result.success, true, "Should succeed");
-    validateFallbackMetadata(result);
-    validateResponseDetails(result.metadata!.responses, false);
-
-    // First response should be from the invalid URL
-    assert.strictEqual(result.metadata!.responses[0].url, invalidUrl);
-    assert.strictEqual(result.metadata!.responses[0].status, "error");
-
-    // Last response should be successful
-    const lastResponse = result.metadata!.responses[result.metadata!.responses.length - 1];
-    assert.strictEqual(lastResponse.status, "success");
+    // The race should complete quickly because working providers respond fast
+    // Invalid URLs typically timeout after several seconds
+    // If this was sequential, it would take longer
+    assert.ok(duration < 10000, "Race should complete before invalid URL timeout");
   });
 });

@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { RpcClient } from "../src/RpcClient.js";
-import { isHexString } from "./helpers/validators.js";
+import { RpcClient } from "../../src/RpcClient.js";
+import { isHexString } from "../helpers/validators.js";
 
 const TEST_URLS: string[] = ["https://eth.merkle.io", "https://ethereum.publicnode.com"];
 

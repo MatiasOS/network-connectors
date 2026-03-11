@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { ParallelStrategy } from "../../src/strategies/parallelStrategy.js";
-import { RpcClient } from "../../src/RpcClient.js";
+import { ParallelStrategy } from "../../../src/strategies/parallelStrategy.js";
+import { RpcClient } from "../../../src/RpcClient.js";
 
 const TEST_URLS = ["https://eth.merkle.io", "https://ethereum.publicnode.com"];
 

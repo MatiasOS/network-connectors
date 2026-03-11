@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { ArbitrumClient } from "../../src/networks/42161/ArbitrumClient.js";
-import type { StrategyConfig } from "../../src/strategies/requestStrategy.js";
+import { ArbitrumClient } from "../../../src/networks/42161/ArbitrumClient.js";
+import type { StrategyConfig } from "../../../src/strategies/requestStrategy.js";
 import {
   validateObject,
   validateBlock,
@@ -11,7 +11,7 @@ import {
   validateLog,
   validateFailureResult,
   isHexString,
-} from "../helpers/validators.js";
+} from "../../helpers/validators.js";
 
 const TEST_URLS = ["https://arb-one.api.pocket.network", "https://arbitrum.meowrpc.com"];
 

@@ -1,15 +1,15 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { ClientFactory } from "../../src/factory/ClientRegistry.js";
-import { EthereumClient } from "../../src/networks/1/EthereumClient.js";
-import { OptimismClient } from "../../src/networks/10/OptimismClient.js";
-import { BNBClient } from "../../src/networks/56/BNBClient.js";
-import { PolygonClient } from "../../src/networks/137/PolygonClient.js";
-import { BaseClient } from "../../src/networks/8453/BaseClient.js";
-import { ArbitrumClient } from "../../src/networks/42161/ArbitrumClient.js";
-import { AztecClient } from "../../src/networks/677868/AztecClient.js";
-import { SepoliaClient } from "../../src/networks/11155111/SepoliaClient.js";
-import type { StrategyConfig } from "../../src/strategies/requestStrategy.js";
+import { ClientFactory } from "../../../src/factory/ClientRegistry.js";
+import { EthereumClient } from "../../../src/networks/1/EthereumClient.js";
+import { OptimismClient } from "../../../src/networks/10/OptimismClient.js";
+import { BNBClient } from "../../../src/networks/56/BNBClient.js";
+import { PolygonClient } from "../../../src/networks/137/PolygonClient.js";
+import { BaseClient } from "../../../src/networks/8453/BaseClient.js";
+import { ArbitrumClient } from "../../../src/networks/42161/ArbitrumClient.js";
+import { AztecClient } from "../../../src/networks/677868/AztecClient.js";
+import { SepoliaClient } from "../../../src/networks/11155111/SepoliaClient.js";
+import type { StrategyConfig } from "../../../src/strategies/requestStrategy.js";
 
 const TEST_URLS = ["https://rpc.example.com"];
 

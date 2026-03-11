@@ -1,8 +1,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { OptimismClient } from "../../src/networks/10/OptimismClient.ts";
-import type { StrategyConfig } from "../../src/strategies/requestStrategy.ts";
-import { isHexString, isAddress, validateObject } from "../helpers/validators.js";
+import { OptimismClient } from "../../../src/networks/10/OptimismClient.ts";
+import type { StrategyConfig } from "../../../src/strategies/requestStrategy.ts";
+import { isHexString, isAddress, validateObject } from "../../helpers/validators.js";
 
 const TEST_URLS = ["https://api.zan.top/opt-mainnet", "https://optimism-mainnet.gateway.tatum.io"];
 

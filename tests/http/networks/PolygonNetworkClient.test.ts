@@ -1,8 +1,11 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { PolygonClient } from "../../src/networks/137/PolygonClient.js";
-import type { StrategyConfig } from "../../src/strategies/requestStrategy.js";
-import type { PolygonTransactionReceipt, PolygonLog } from "../../src/networks/137/PolygonTypes.js";
+import { PolygonClient } from "../../../src/networks/137/PolygonClient.js";
+import type { StrategyConfig } from "../../../src/strategies/requestStrategy.js";
+import type {
+  PolygonTransactionReceipt,
+  PolygonLog,
+} from "../../../src/networks/137/PolygonTypes.js";
 import {
   validateObject,
   validateBlock,
@@ -10,7 +13,7 @@ import {
   validateTransaction,
   isHexString,
   isAddress,
-} from "../helpers/validators.js";
+} from "../../helpers/validators.js";
 
 const TEST_URLS = ["https://poly.api.pocket.network", "https://polygon-bor-rpc.publicnode.com"];
 

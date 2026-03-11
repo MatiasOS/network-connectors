@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { RpcClient } from "../src/RpcClient";
+import { RpcClient } from "../../src/RpcClient";
 const TEST_URLS = [
     "https://eth.merkle.io",
     "https://ethereum.publicnode.com",

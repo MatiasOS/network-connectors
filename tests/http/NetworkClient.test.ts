@@ -1,8 +1,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { NetworkClient } from "../src/NetworkClient.js";
-import type { StrategyConfig } from "../src/strategies/requestStrategy.js";
-import { isHexString } from "./helpers/validators.js";
+import { NetworkClient } from "../../src/NetworkClient.js";
+import type { StrategyConfig } from "../../src/strategies/requestStrategy.js";
+import { isHexString } from "../helpers/validators.js";
 
 const TEST_URLS = ["https://eth.merkle.io", "https://ethereum.publicnode.com"];
 
@@ -59,7 +59,8 @@ describe("NetworkClient - Execute with Fallback Strategy", () => {
     assert.strictEqual(result.success, true, "Result should be successful");
     assert.ok(result.data, "Result should have data");
     assert.ok(isHexString(result.data), "chainId should be hex string");
-    assert.strictEqual(result.metadata, undefined, "Fallback strategy should not have metadata");
+    assert.ok(result.metadata, "Fallback strategy should have metadata");
+    assert.strictEqual(result.metadata.strategy, "fallback", "Strategy should be fallback");
   });
 
   it("should execute eth_blockNumber", async () => {

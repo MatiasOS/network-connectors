@@ -1,25 +1,25 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { BNBClient } from "../../src/networks/56/BNBClient.js";
-import type { StrategyConfig } from "../../src/strategies/requestStrategy.js";
+import { SepoliaClient } from "../../../src/networks/11155111/SepoliaClient.js";
+import type { StrategyConfig } from "../../../src/strategies/requestStrategy.js";
 import {
   validateObject,
   validateBlock,
   validateSuccessResult,
   validateTransaction,
   isHexString,
-} from "../helpers/validators.js";
+} from "../../helpers/validators.js";
 
-const TEST_URLS = ["https://binance.llamarpc.com", "wss://bsc-rpc.publicnode.com"];
+const TEST_URLS = ["https://ethereum-sepolia-rpc.publicnode.com", "https://0xrpc.io/sep"];
 
-describe("BNBNetworkClient - Block Methods", () => {
+describe("SepoliaNetworkClient - Block Methods", () => {
   const config: StrategyConfig = {
     type: "fallback",
     rpcUrls: TEST_URLS,
   };
 
   it("should get block by number (latest)", async () => {
-    const client = new BNBClient(config);
+    const client = new SepoliaClient(config);
     const result = await client.getBlockByNumber("latest", false);
 
     validateSuccessResult(result);
@@ -27,7 +27,7 @@ describe("BNBNetworkClient - Block Methods", () => {
   });
 
   it("should get block by number (earliest)", async () => {
-    const client = new BNBClient(config);
+    const client = new SepoliaClient(config);
     const result = await client.getBlockByNumber("earliest", false);
 
     validateSuccessResult(result);
@@ -35,7 +35,7 @@ describe("BNBNetworkClient - Block Methods", () => {
   });
 
   it("should get block by number (pending)", async () => {
-    const client = new BNBClient(config);
+    const client = new SepoliaClient(config);
     const result = await client.getBlockByNumber("pending", false);
 
     // Pending block may or may not exist depending on network state
@@ -50,7 +50,7 @@ describe("BNBNetworkClient - Block Methods", () => {
   });
 
   it("should get block by number (safe)", async () => {
-    const client = new BNBClient(config);
+    const client = new SepoliaClient(config);
     const result = await client.getBlockByNumber("safe", false);
 
     validateSuccessResult(result);
@@ -58,7 +58,7 @@ describe("BNBNetworkClient - Block Methods", () => {
   });
 
   it("should get block by number (finalized)", async () => {
-    const client = new BNBClient(config);
+    const client = new SepoliaClient(config);
     const result = await client.getBlockByNumber("finalized", false);
 
     validateSuccessResult(result);
@@ -66,14 +66,14 @@ describe("BNBNetworkClient - Block Methods", () => {
   });
 });
 
-describe("BNBNetworkClient - Transaction Methods", () => {
+describe("SepoliaNetworkClient - Transaction Methods", () => {
   const config: StrategyConfig = {
     type: "fallback",
     rpcUrls: TEST_URLS,
   };
 
   it("should get transaction by hash", async () => {
-    const client = new BNBClient(config);
+    const client = new SepoliaClient(config);
 
     // Get a block with transactions
     const blockResult = await client.getBlockByNumber("latest", false);

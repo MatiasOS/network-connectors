@@ -1,14 +1,14 @@
 /* biome-ignore-all lint/suspicious/noExplicitAny: <TODO> */
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { AvalancheClient } from "../../src/networks/43114/AvalancheClient.js";
-import type { StrategyConfig } from "../../src/strategies/requestStrategy.js";
+import { AvalancheClient } from "../../../src/networks/43114/AvalancheClient.js";
+import type { StrategyConfig } from "../../../src/strategies/requestStrategy.js";
 import {
   validateSuccessResult,
   validateFailureResult,
   isHexString,
   isAddress,
-} from "../helpers/validators.js";
+} from "../../helpers/validators.js";
 
 const TEST_URLS = [
   "https://api.avax.network/ext/bc/C/rpc",
