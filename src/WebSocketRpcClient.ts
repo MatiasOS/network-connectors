@@ -29,6 +29,8 @@ export class WebSocketRpcClient implements JsonRpcTransport {
   private maxReconnectRetries: number;
   private initialReconnectDelayMs: number;
   private maxReconnectDelayMs: number;
+  private closed = false;
+  private connectingWs: WebSocket | null = null;
 
   constructor(url: string, options?: WebSocketRpcClientOptions) {
     this.url = url;
@@ -85,7 +87,16 @@ export class WebSocketRpcClient implements JsonRpcTransport {
   }
 
   async close(): Promise<void> {
+    this.closed = true;
     this.rejectAllPending(new Error("WebSocket connection closed by client"));
+
+    if (this.connectingWs) {
+      this.connectingWs.onopen = null;
+      this.connectingWs.onclose = null;
+      this.connectingWs.onerror = null;
+      this.connectingWs.close();
+      this.connectingWs = null;
+    }
 
     if (this.ws) {
       this.ws.onclose = null;
@@ -96,6 +107,7 @@ export class WebSocketRpcClient implements JsonRpcTransport {
     }
 
     this.connectPromise = null;
+    this.closed = false;
   }
 
   private async ensureConnection(): Promise<void> {
@@ -120,10 +132,16 @@ export class WebSocketRpcClient implements JsonRpcTransport {
     let delay = this.initialReconnectDelayMs;
 
     for (let attempt = 0; attempt <= this.maxReconnectRetries; attempt++) {
+      if (this.closed) {
+        throw new Error("WebSocket client is closed");
+      }
       try {
         await this.connect();
         return;
       } catch (error) {
+        if (this.closed) {
+          throw new Error("WebSocket client is closed");
+        }
         if (attempt === this.maxReconnectRetries) {
           throw new Error(
             `WebSocket connection failed after ${this.maxReconnectRetries + 1} attempts: ${error instanceof Error ? error.message : String(error)}`,
@@ -137,9 +155,16 @@ export class WebSocketRpcClient implements JsonRpcTransport {
 
   private connect(): Promise<void> {
     return new Promise<void>((resolve, reject) => {
+      if (this.closed) {
+        reject(new Error("WebSocket client is closed"));
+        return;
+      }
+
       const ws = new WebSocket(this.url);
+      this.connectingWs = ws;
 
       ws.onopen = () => {
+        this.connectingWs = null;
         this.ws = ws;
         this.setupMessageHandler(ws);
         this.setupCloseHandler(ws);
@@ -147,7 +172,13 @@ export class WebSocketRpcClient implements JsonRpcTransport {
       };
 
       ws.onerror = (event) => {
+        this.connectingWs = null;
         reject(new Error(`WebSocket connection error to ${this.url}: ${String(event)}`));
+      };
+
+      ws.onclose = () => {
+        this.connectingWs = null;
+        reject(new Error(`WebSocket connection closed before opening to ${this.url}`));
       };
     });
   }
