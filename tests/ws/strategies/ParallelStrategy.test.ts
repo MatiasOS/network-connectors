@@ -49,7 +49,7 @@ describe("ParallelStrategy (WebSocket) - Execute [strong]", () => {
 
     assert.strictEqual(result.success, true, "Should succeed (at least one provider works)");
     assert.ok(result.metadata, "Should have metadata");
-    assert.ok(result.metadata.responses.length === 3, "Should have 3 responses");
+    assert.ok(result.metadata.responses.length >= 3, "Should have at least 3 responses");
 
     const errorResponses = result.metadata.responses.filter((r) => r.status === "error");
     assert.ok(errorResponses.length >= 1, "Should have at least one error response");

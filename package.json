@@ -8,6 +8,7 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "test": "tsx --test tests/**/*.test.ts",
     "test:http": "tsx --test tests/http/**/*.test.ts",
     "test:wss": "tsx --test tests/ws/**/*.test.ts",
     "typecheck": "tsc --noEmit",
