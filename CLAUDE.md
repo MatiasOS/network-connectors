@@ -47,13 +47,22 @@ This file provides structured context for AI assistants to understand the @opens
 │   │   └── bitcoin/             # Bitcoin (CAIP-2: bip122:*)
 │   ├── factory/                 # Client instantiation
 │   │   └── ClientRegistry.ts    # Chain ID to client mapping
-│   ├── NetworkClient.ts         # Base network client
-│   ├── RpcClient.ts             # Low-level RPC client
-│   ├── RpcClientTypes.ts        # JSON-RPC type definitions
+│   ├── NetworkClient.ts         # Base network client (concrete)
+│   ├── JsonRpcTransport.ts      # Transport interface and auto-detect factory
+│   ├── RpcClient.ts             # HTTP JSON-RPC transport
+│   ├── WebSocketRpcClient.ts    # WebSocket JSON-RPC transport
+│   ├── RpcClientTypes.ts        # JSON-RPC request/response type definitions
 │   └── index.ts                 # Main export file
 ├── tests/                       # Comprehensive test suite
-│   ├── strategies/              # Strategy tests
-│   └── networks/                # Network-specific client tests
+│   ├── http/                    # HTTP transport tests
+│   │   ├── strategies/          # Strategy tests (HTTP)
+│   │   ├── networks/            # Network client tests (HTTP)
+│   │   └── factory/             # ClientFactory tests
+│   ├── ws/                      # WebSocket transport tests
+│   │   ├── strategies/          # Strategy tests (WebSocket)
+│   │   └── networks/            # Network client tests (WebSocket)
+│   ├── transport/               # Transport layer tests
+│   └── helpers/                 # Test utilities (validators, env config)
 ├── scripts/
 │   └── publish-and-tag.sh       # Release automation script
 ├── .github/workflows/
@@ -74,23 +83,99 @@ This file provides structured context for AI assistants to understand the @opens
 
 #### NetworkClient ([src/NetworkClient.ts](src/NetworkClient.ts))
 
-Abstract base class providing:
+Concrete base class providing:
 
 - `execute<T>(method: string, params: any[]): Promise<StrategyResult<T>>` - Generic RPC method execution
 - `getStrategy(): RequestStrategy` - Get current strategy instance
 - `getStrategyName(): string` - Get strategy name ("fallback", "parallel", or "race")
 - `getRpcUrls(): string[]` - Get configured RPC URLs
-- `updateStrategy(config: StrategyConfig): void` - Dynamically switch strategies
+- `updateStrategy(type: StrategyConfig["type"]): void` - Dynamically switch strategies (closes old strategy's transports before replacing)
+- `close(): Promise<void>` - Close underlying transports (e.g., WebSocket connections)
 
 #### RpcClient ([src/RpcClient.ts](src/RpcClient.ts))
 
-Low-level JSON-RPC 2.0 client:
+HTTP JSON-RPC 2.0 transport (implements `JsonRpcTransport`):
 
 - `call<T>(method: string, params: any[]): Promise<T>` - Direct RPC calls via fetch
 - `getUrl(): string` - Get RPC endpoint URL
 - `getRequestId(): number` - Get current request ID counter
 - Handles HTTP errors and extracts RPC errors from responses
 - Auto-increments request ID for each call
+- Stateless — no `close()` needed
+
+### Transport Layer
+
+#### JsonRpcTransport Interface ([src/JsonRpcTransport.ts](src/JsonRpcTransport.ts))
+
+Common interface for both HTTP and WebSocket transports:
+
+```typescript
+interface JsonRpcTransport {
+  call<T>(method: string, params?: any[]): Promise<T>;
+  getUrl(): string;
+  close?(): Promise<void>;  // Optional — HTTP is stateless, WebSocket needs cleanup
+}
+```
+
+#### createTransport() Factory ([src/JsonRpcTransport.ts](src/JsonRpcTransport.ts))
+
+Auto-detects transport from URL scheme:
+
+```typescript
+function createTransport(url: string): JsonRpcTransport {
+  if (url.startsWith("ws://") || url.startsWith("wss://")) {
+    return new WebSocketRpcClient(url);
+  }
+  return new RpcClient(url);  // HTTP
+}
+```
+
+Used by `StrategyFactory.create()` to build transports — strategies accept `JsonRpcTransport[]` and can mix HTTP and WebSocket endpoints.
+
+#### WebSocketRpcClient ([src/WebSocketRpcClient.ts](src/WebSocketRpcClient.ts))
+
+WebSocket JSON-RPC 2.0 transport (implements `JsonRpcTransport`):
+
+- Persistent connection with lazy connect on first `call()`
+- Request multiplexing via JSON-RPC `id` mapping (concurrent requests over single connection)
+- Per-request timeout (default: 30s)
+- Auto-reconnect with exponential backoff
+- `close()` rejects all pending requests and closes the connection
+
+**Configuration Options**:
+
+```typescript
+interface WebSocketRpcClientOptions {
+  requestTimeoutMs?: number;          // Default: 30000
+  maxReconnectRetries?: number;       // Default: 5
+  initialReconnectDelayMs?: number;   // Default: 1000
+  maxReconnectDelayMs?: number;       // Default: 30000
+}
+```
+
+#### Lifecycle Management
+
+`close()` propagates from `NetworkClient` → `RequestStrategy` → individual transports:
+
+- **HTTP transports** (`RpcClient`): No-op (stateless, each request is independent)
+- **WebSocket transports** (`WebSocketRpcClient`): Rejects pending requests, closes connection
+- **Strategies**: Call `close()` on all underlying transports via `Promise.all`
+- **`updateStrategy()`**: Fires-and-forgets `close()` on the old strategy before replacing
+
+**Mixed transport usage** — HTTP and WebSocket endpoints in the same strategy:
+
+```typescript
+const config = {
+  type: "fallback" as const,
+  rpcUrls: [
+    "https://eth.llamarpc.com",      // HTTP transport (auto-detected)
+    "wss://eth.llamarpc.com/ws"      // WebSocket transport (auto-detected)
+  ]
+};
+const client = ClientFactory.createClient(1, config);
+// ... use client ...
+await client.close();  // Closes WebSocket connections, no-op for HTTP
+```
 
 ### Type System
 
@@ -100,6 +185,7 @@ Low-level JSON-RPC 2.0 client:
 interface RequestStrategy {
   execute<T>(method: string, params: any[]): Promise<StrategyResult<T>>;
   getName(): string;
+  close?(): Promise<void>;  // Optional — closes underlying transports
 }
 
 interface StrategyResult<T> {
@@ -131,9 +217,13 @@ interface StrategyConfig {
 }
 ```
 
-#### Blockchain Types ([src/RpcClientTypes.ts](src/RpcClientTypes.ts))
+#### JSON-RPC Types ([src/RpcClientTypes.ts](src/RpcClientTypes.ts))
 
-Common types across Ethereum-compatible networks:
+Contains only the low-level JSON-RPC request/response types (`JsonRpcRequest`, `JsonRpcResponse`). Blockchain-specific types live in each network's types file (e.g., `networks/1/EthereumTypes.ts`).
+
+#### Blockchain Types (e.g., [src/networks/1/EthereumTypes.ts](src/networks/1/EthereumTypes.ts))
+
+Common types across Ethereum-compatible networks (each network re-exports or extends these):
 
 ```typescript
 type BlockTag = "latest" | "earliest" | "pending" | "finalized" | "safe";
@@ -194,21 +284,27 @@ interface EthCallObject {
 
 ```typescript
 // Tries each RPC client in order until one succeeds
-for (const client of this.rpcClients) {
+for (const rpcClient of this.rpcClients) {
   try {
-    const data = await client.call<T>(method, params);
-    return { success: true, data };
+    const data = await rpcClient.call<T>(method, params);
+    responses.push({ url: rpcClient.getUrl(), status: "success", responseTime, data });
+    return {
+      success: true,
+      data,
+      metadata: { strategy: "fallback", timestamp, responses, hasInconsistencies: false },
+    };
   } catch (error) {
-    errors.push({ url, status: "error", responseTime, error: message });
+    responses.push({ url: rpcClient.getUrl(), status: "error", responseTime, error: message });
   }
 }
-return { success: false, errors };
+return { success: false, errors: responses, metadata };
 ```
 
 **Characteristics**:
 
 - Minimal overhead (stops at first success)
-- No metadata tracking
+- Returns metadata tracking all attempted providers and response times
+- `hasInconsistencies` always `false` (no cross-provider comparison)
 - Best for reliability when providers are generally consistent
 
 ### ParallelStrategy ([src/strategies/parallelStrategy.ts](src/strategies/parallelStrategy.ts))
@@ -289,15 +385,16 @@ private hashResponse(data: object): string {
 
 ### StrategyFactory ([src/strategies/requestStrategy.ts](src/strategies/requestStrategy.ts))
 
-Creates appropriate strategy based on configuration:
+Creates appropriate strategy based on configuration. Uses `createTransport()` to auto-detect HTTP vs WebSocket from URL scheme:
 
 ```typescript
 static create(config: StrategyConfig): RequestStrategy {
-  if (config.rpcUrls.length === 0) {
+  if (!config.rpcUrls || config.rpcUrls.length === 0) {
     throw new Error("At least one RPC URL must be provided");
   }
 
-  const rpcClients = config.rpcUrls.map(url => new RpcClient(url));
+  // Auto-detects HTTP vs WebSocket from URL scheme
+  const rpcClients = config.rpcUrls.map((url) => createTransport(url));
 
   switch (config.type) {
     case "fallback": return new FallbackStrategy(rpcClients);
@@ -315,15 +412,15 @@ static create(config: StrategyConfig): RequestStrategy {
 | Network | Chain ID | Client Class | Special Features |
 |---------|----------|--------------|------------------|
 | Ethereum | 1 | `EthereumClient` | Full eth_*, web3_*, net_*, debug_*, trace_*, txpool_* methods |
-| Optimism | 10 | `OptimismClient` | Ethereum methods + optimism_*rollup methods + opp2p_* P2P + admin_* |
+| Optimism | 10 | `OptimismClient` | Ethereum methods + optimism_* rollup methods + opp2p_* P2P + admin_* |
 | BNB Smart Chain | 56 | `BNBClient` | Extended Ethereum methods + BSC-specific features |
-| BNB Testnet | 97 | `BNBClient` | Maps to BNBClient |
+| BNB Testnet | 97 | `BNBClient` | Factory maps to `BNBClient`; `BNBTestnetClient` also exported for direct use |
 | Polygon | 137 | `PolygonClient` | Ethereum methods + Polygon Bor validator methods |
 | Base | 8453 | `BaseClient` | Optimism-compatible (reuses Optimism types/methods) |
 | Arbitrum One | 42161 | `ArbitrumClient` | Ethereum methods + arbtrace_* (Arbitrum-specific traces) |
 | Avalanche C-Chain | 43114 | `AvalancheClient` | Ethereum methods + avax cross-chain + admin + extended debug |
 | Aztec | 677868 | `AztecClient` | Custom node_*/nodeAdmin_* methods (non-EVM) |
-| Hardhat | 31337 | `EthereumClient` | Local development network |
+| Hardhat | 31337 | `HardhatClient` | Ethereum + hardhat_*/evm_* state manipulation methods |
 | Sepolia Testnet | 11155111 | `SepoliaClient` | Ethereum-compatible testnet |
 | Bitcoin Mainnet | `bip122:000000000019d6689c085ae165831e93` | `BitcoinClient` | Full Bitcoin Core 28+ RPC (~115 methods) |
 | Bitcoin Testnet3 | `bip122:000000000933ea01ad0ee984209779ba` | `BitcoinClient` | Bitcoin testnet3 network |
@@ -483,7 +580,7 @@ async call<T>(method: string, params: any[] = []): Promise<T>
 
 ```typescript
 // EVM chain IDs (numeric)
-type SupportedChainId = 1 | 10 | 56 | 97 | 137 | 8453 | 42161 | 677868 | 31337 | 11155111;
+type SupportedChainId = 1 | 10 | 56 | 97 | 137 | 8453 | 42161 | 43114 | 677868 | 31337 | 11155111;
 
 // Bitcoin chain IDs (CAIP-2/BIP122 format)
 type SupportedBitcoinChainId = BitcoinChainId;  // "bip122:000000000019d6689c085ae165831e93" | ...
@@ -491,16 +588,23 @@ type SupportedBitcoinChainId = BitcoinChainId;  // "bip122:000000000019d6689c085
 // All supported networks
 type SupportedNetwork = SupportedChainId | SupportedBitcoinChainId;
 
-// Maps network identifier to client type
-type NetworkToClient<T extends SupportedNetwork> =
-  T extends SupportedBitcoinChainId ? BitcoinClient :
-  T extends 1 | 31337 | 11155111 ? EthereumClient :
+// Maps EVM chain ID to client type
+type ChainIdToClient<T extends SupportedChainId> =
+  T extends 1 | 11155111 ? EthereumClient :
+  T extends 31337 ? HardhatClient :
   T extends 10 ? OptimismClient :
   T extends 56 | 97 ? BNBClient :
   T extends 137 ? PolygonClient :
   T extends 8453 ? BaseClient :
   T extends 42161 ? ArbitrumClient :
+  T extends 43114 ? AvalancheClient :
   T extends 677868 ? AztecClient :
+  NetworkClient;
+
+// Maps any network identifier to client type
+type NetworkToClient<T extends SupportedNetwork> =
+  T extends SupportedBitcoinChainId ? BitcoinClient :
+  T extends SupportedChainId ? ChainIdToClient<T> :
   NetworkClient;
 ```
 
@@ -508,10 +612,17 @@ type NetworkToClient<T extends SupportedNetwork> =
 
 ```typescript
 // Overloaded createClient - returns correct type automatically
-static createClient(chainId: 1 | 31337, config: StrategyConfig): EthereumClient;
+static createClient(chainId: 1, config: StrategyConfig): EthereumClient;
+static createClient(chainId: 31337, config: StrategyConfig): HardhatClient;
+static createClient(chainId: 11155111, config: StrategyConfig): SepoliaClient;
 static createClient(chainId: 10, config: StrategyConfig): OptimismClient;
+static createClient(chainId: 56 | 97, config: StrategyConfig): BNBClient;
+static createClient(chainId: 137, config: StrategyConfig): PolygonClient;
+static createClient(chainId: 8453, config: StrategyConfig): BaseClient;
+static createClient(chainId: 42161, config: StrategyConfig): ArbitrumClient;
+static createClient(chainId: 43114, config: StrategyConfig): AvalancheClient;
+static createClient(chainId: 677868, config: StrategyConfig): AztecClient;
 static createClient(chainId: SupportedBitcoinChainId, config: StrategyConfig): BitcoinClient;
-// ... other overloads
 static createClient(network: SupportedNetwork, config: StrategyConfig): NetworkClient;
 
 // Type-safe client with generic inference
@@ -561,29 +672,58 @@ describe("ComponentName - Functionality", () => {
 
 ### Test Categories
 
-1. **Strategy Tests** ([tests/strategies/](tests/strategies/)):
+Tests are split by transport to validate both HTTP and WebSocket:
+
+1. **HTTP Strategy Tests** ([tests/http/strategies/](tests/http/strategies/)):
    - Constructor validation (empty URLs, strategy types)
    - Strategy execution (success, error handling)
-   - Response metadata (parallel and race strategies)
-   - Fallback behavior
-   - Race strategy first-success behavior
+   - Response metadata (parallel, fallback, and race strategies)
+   - Fallback behavior, race first-success behavior
 
-2. **Network Tests** ([tests/networks/](tests/networks/)):
+2. **HTTP Network Tests** ([tests/http/networks/](tests/http/networks/)):
    - Network-specific client instantiation
-   - Method parameter handling
-   - Type safety checks
+   - Method parameter handling and type safety checks
    - Error propagation
 
-3. **Factory Tests**:
+3. **HTTP Factory Tests** ([tests/http/factory/](tests/http/factory/)):
    - Chain ID to client mapping
    - Type-safe client creation
    - Invalid chain ID handling
 
+4. **WebSocket Strategy Tests** ([tests/ws/strategies/](tests/ws/strategies/)):
+   - Same patterns as HTTP strategies, over WebSocket transport
+
+5. **WebSocket Network Tests** ([tests/ws/networks/](tests/ws/networks/)):
+   - Same patterns as HTTP networks, over WebSocket transport
+   - Organized by chain ID subdirectories (e.g., `tests/ws/networks/1/`)
+
+6. **Transport Tests** ([tests/transport/](tests/transport/)):
+   - `JsonRpcTransport.test.ts` - Transport interface tests
+   - `createTransport.test.ts` - Auto-detection of HTTP vs WebSocket
+
 ### Test Helpers
 
-[tests/helpers/validators.js](tests/helpers/validators.js):
+[tests/helpers/validators.ts](tests/helpers/validators.ts):
 
 - `isHexString(value)` - Validates hex string format (0x prefix)
+- `isAddress(value)` - Validates Ethereum address format (0x + 40 hex chars)
+- `validateObject(obj, requiredFields?)` - Validates object existence and required fields
+- `validateSuccessResult(result, dataType?)` - Validates successful RPC result
+- `validateFailureResult(result)` - Validates failed RPC result
+- `validateBlock(block, validateHexFields?)` - Validates block object shape and hex formats
+- `validateTransaction(tx)` - Validates transaction object
+- `validateTransactionReceipt(receipt)` - Validates receipt object
+- `validateLog(log)` - Validates log object
+- `validateParallelMetadata(result, minResponses?)` - Validates parallel strategy metadata
+- `validateFallbackMetadata(result, expectedResponses?)` - Validates fallback strategy metadata
+- `validateRaceMetadata(result, minResponses?)` - Validates race strategy metadata
+- `validateResponseDetails(responses, requireHash?)` - Validates individual provider responses
+- `validateFeeHistory(feeHistory)` - Validates fee history object
+
+[tests/helpers/env.ts](tests/helpers/env.ts):
+
+- `getTestUrls(network, baseUrls)` - Returns HTTP test URLs (appends Alchemy URL if API key set)
+- `getTestWsUrls(network, baseUrls)` - Returns WebSocket test URLs (appends Alchemy WSS URL if API key set)
 
 ## Build and Configuration
 
@@ -626,7 +766,9 @@ describe("ComponentName - Functionality", () => {
 | Command | Description |
 |---------|-------------|
 | `npm run build` | Compile TypeScript to JavaScript using tsc |
-| `npm run test` | Run test suite using Node.js native test runner with tsx |
+| `npm run test` | Run full test suite (HTTP + WebSocket) using Node.js native test runner with tsx |
+| `npm run test:http` | Run HTTP transport tests only |
+| `npm run test:wss` | Run WebSocket transport tests only |
 | `npm run typecheck` | Type check without code emission |
 | `npm run format` | Check code formatting (Biome) |
 | `npm run format:fix` | Auto-fix formatting issues |
@@ -687,7 +829,8 @@ To add a new network:
 6. Update `ChainIdToClient` type mapping
 7. Add case to factory `createClient()` and `createTypedClient()` methods
 8. Export from [src/index.ts](src/index.ts)
-9. Add tests in [tests/networks/](tests/networks/)
+9. Add HTTP tests in [tests/http/networks/](tests/http/networks/)
+10. Add WebSocket tests in [tests/ws/networks/<CHAIN_ID>/](tests/ws/networks/)
 
 ## Adding New RPC Methods
 
@@ -706,9 +849,12 @@ To add new RPC methods to existing network:
 - **ES Modules**: All code uses ES module syntax (`import`/`export`)
 - **Type Safety**: Prioritize strict TypeScript typing over flexibility
 - **Strategy Pattern**: All RPC calls go through the strategy pattern
+- **Transport Abstraction**: `createTransport()` auto-detects HTTP vs WebSocket. Strategies accept `JsonRpcTransport[]`, not `RpcClient[]` directly
+- **Resource Cleanup**: Call `close()` on clients that use WebSocket transports when done. HTTP transports are stateless and don't need closing
 - **Hex Encoding**: All blockchain numbers are hex-encoded strings (e.g., `"0x1"`)
 - **Optional Chaining**: Use for EIP-specific fields (baseFeePerGas, maxFeePerGas, etc.)
 - **Biome**: Use Biome for linting/formatting, not ESLint/Prettier
 - **Native Test**: Use Node.js native test framework, not Jest/Mocha
 - **Real RPC Tests**: Always test with real RPC calls against live endpoints. Never mock RPC calls
 - **Type Validation**: Always validate response data against the expected TypeScript types. If a method cannot be validated against real types (e.g., admin/debug methods unsupported on public nodes), tag the test with `[weak]`. Tests with full type validation are tagged `[strong]`
+- **BNB Testnet Factory Note**: `ClientFactory` maps chain 97 to `BNBClient` at runtime, but `BNBTestnetClient` is exported from `index.ts` for direct instantiation
