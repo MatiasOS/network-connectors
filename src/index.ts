@@ -17,6 +17,26 @@ export type {
   AccessListEntry as EthAccessListEntry,
 } from "./networks/1/EthereumTypes.js";
 
+// Hardhat (Chain ID: 31337)
+export { HardhatClient } from "./networks/31337/HardhatClient.js";
+export type {
+  HardhatBlock,
+  HardhatTransaction,
+  HardhatTransactionReceipt,
+  HardhatLog,
+  HardhatLogFilter,
+  HardhatCallObject,
+  HardhatWithdrawal,
+  HardhatSyncingStatus,
+  HardhatMetadata,
+  HardhatForkedNetworkInfo,
+  HardhatResetOptions,
+  HardhatCompilationResult,
+  BlockNumberOrTag as HardhatBlockNumberOrTag,
+  BlockTag as HardhatBlockTag,
+  AccessListEntry as HardhatAccessListEntry,
+} from "./networks/31337/HardhatTypes.js";
+
 // Optimism (Chain ID: 10)
 export { OptimismClient } from "./networks/10/OptimismClient.js";
 export type {

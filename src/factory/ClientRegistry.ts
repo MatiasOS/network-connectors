@@ -8,6 +8,7 @@ import { BaseClient } from "../networks/8453/BaseClient.js";
 import { ArbitrumClient } from "../networks/42161/ArbitrumClient.js";
 import { AvalancheClient } from "../networks/43114/AvalancheClient.js";
 import { AztecClient } from "../networks/677868/AztecClient.js";
+import { HardhatClient } from "../networks/31337/HardhatClient.js";
 import { SepoliaClient } from "../networks/11155111/SepoliaClient.js";
 import { BitcoinClient } from "../networks/bitcoin/BitcoinClient.js";
 import {
@@ -52,23 +53,25 @@ export type ClientConstructor = new (config: StrategyConfig) => NetworkClient;
 /**
  * Map EVM chain IDs to their specific client types
  */
-export type ChainIdToClient<T extends SupportedChainId> = T extends 1 | 31337 | 11155111
+export type ChainIdToClient<T extends SupportedChainId> = T extends 1 | 11155111
   ? EthereumClient
-  : T extends 10
-    ? OptimismClient
-    : T extends 56 | 97
-      ? BNBClient
-      : T extends 137
-        ? PolygonClient
-        : T extends 8453
-          ? BaseClient
-          : T extends 42161
-            ? ArbitrumClient
-            : T extends 43114
-              ? AvalancheClient
-              : T extends 677868
-                ? AztecClient
-                : NetworkClient;
+  : T extends 31337
+    ? HardhatClient
+    : T extends 10
+      ? OptimismClient
+      : T extends 56 | 97
+        ? BNBClient
+        : T extends 137
+          ? PolygonClient
+          : T extends 8453
+            ? BaseClient
+            : T extends 42161
+              ? ArbitrumClient
+              : T extends 43114
+                ? AvalancheClient
+                : T extends 677868
+                  ? AztecClient
+                  : NetworkClient;
 
 /**
  * Map any network identifier to its specific client type
@@ -92,7 +95,7 @@ const CHAIN_REGISTRY: Record<SupportedChainId, ClientConstructor> = {
   42161: ArbitrumClient,
   43114: AvalancheClient,
   677868: AztecClient,
-  31337: EthereumClient, // Hardhat local network mapped to EthereumClient
+  31337: HardhatClient, // Hardhat local development network
   11155111: SepoliaClient, // Sepolia testnet mapped to EthereumClient
 };
 
@@ -121,7 +124,11 @@ export class ClientFactory {
   /**
    * Create an Ethereum client
    */
-  static createClient(chainId: 1 | 31337, config: StrategyConfig): EthereumClient;
+  static createClient(chainId: 1, config: StrategyConfig): EthereumClient;
+  /**
+   * Create a Hardhat client
+   */
+  static createClient(chainId: 31337, config: StrategyConfig): HardhatClient;
   /**
    * Create a Sepolia testnet client
    */
