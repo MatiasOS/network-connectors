@@ -1,5 +1,10 @@
 # @openscan/network-connectors
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![CI](https://github.com/openscan-explorer/network-connectors/actions/workflows/npm-publish.yml/badge.svg)](https://github.com/openscan-explorer/network-connectors/actions/workflows/npm-publish.yml)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-24-green)](https://nodejs.org/)
+
 TypeScript library providing unified, type-safe RPC client interfaces for multiple blockchain networks with configurable request execution strategies.
 
 ## Features
@@ -8,10 +13,19 @@ TypeScript library providing unified, type-safe RPC client interfaces for multip
 - **Bitcoin Support**: Full Bitcoin Core v28+ RPC support with ~115 methods using CAIP-2/BIP122 chain identifiers
 - **Strategy Pattern**: Pluggable request execution strategies (Fallback for reliability, Parallel for consistency detection, Race for minimum latency)
 - **Type Safety**: Strong TypeScript typing with network-specific type definitions
+- **Dual Transport**: HTTP and WebSocket support with automatic transport detection from URL scheme
+- **WebSocket Features**: Persistent connections, request multiplexing, auto-reconnect with exponential backoff
 - **Zero Dependencies**: Pure Node.js implementation with no external runtime dependencies
 - **ES Modules**: Native ESM support for modern JavaScript environments
 - **Factory Pattern**: Type-safe client instantiation based on chain IDs (numeric for EVM, CAIP-2 for Bitcoin)
 - **Inconsistency Detection**: Parallel strategy can detect RPC provider data divergence
+- **Resource Lifecycle**: `close()` method for clean shutdown of WebSocket connections
+
+## Installation
+
+```bash
+npm install @openscan/network-connectors
+```
 
 ## Supported Networks
 
@@ -22,13 +36,13 @@ TypeScript library providing unified, type-safe RPC client interfaces for multip
 | Ethereum | 1 | `EthereumClient` | Full eth_*, web3_*, net_*, debug_*, trace_*, txpool_* |
 | Optimism | 10 | `OptimismClient` | Ethereum + optimism_*, opp2p_*, admin_* methods |
 | BNB Smart Chain | 56 | `BNBClient` | Extended Ethereum methods + BSC-specific features |
-| BNB Testnet | 97 | `BNBClient` | Maps to BNBClient |
+| BNB Testnet | 97 | `BNBClient` | Factory maps to `BNBClient`; `BNBTestnetClient` also exported for direct use |
 | Polygon | 137 | `PolygonClient` | Ethereum + Polygon Bor validator methods |
 | Base | 8453 | `BaseClient` | Optimism-compatible (reuses Optimism types) |
 | Arbitrum One | 42161 | `ArbitrumClient` | Ethereum + arbtrace_* (Arbitrum traces) |
 | Avalanche C-Chain | 43114 | `AvalancheClient` | Ethereum + avax cross-chain, admin, extended debug |
 | Aztec | 677868 | `AztecClient` | Custom node_*/nodeAdmin_* methods (non-EVM) |
-| Hardhat | 31337 | `EthereumClient` | Local development network |
+| Hardhat | 31337 | `HardhatClient` | Ethereum + hardhat_*/evm_* state manipulation methods |
 | Sepolia Testnet | 11155111 | `SepoliaClient` | Ethereum-compatible testnet |
 
 ### Bitcoin Networks
@@ -80,14 +94,17 @@ import {
 │   ├── strategies/              # Request execution strategies (Fallback, Parallel, Race)
 │   ├── networks/                # Network-specific clients organized by chain ID
 │   ├── factory/                 # Client instantiation and chain ID mapping
-│   ├── NetworkClient.ts         # Base network client (abstract class)
-│   ├── RpcClient.ts             # Low-level JSON-RPC 2.0 client
-│   ├── RpcClientTypes.ts        # Blockchain type definitions
+│   ├── NetworkClient.ts         # Base network client (concrete class)
+│   ├── JsonRpcTransport.ts      # Transport interface and auto-detect factory
+│   ├── RpcClient.ts             # HTTP JSON-RPC transport
+│   ├── WebSocketRpcClient.ts    # WebSocket JSON-RPC transport
+│   ├── RpcClientTypes.ts        # JSON-RPC request/response type definitions
 │   └── index.ts                 # Main export file
 ├── tests/                       # Comprehensive test suite
-│   ├── strategies/              # Strategy tests
-│   ├── networks/                # Network-specific client tests
-│   └── helpers/                 # Test utilities
+│   ├── http/                    # HTTP transport tests (strategies, networks, factory)
+│   ├── ws/                      # WebSocket transport tests (strategies, networks)
+│   ├── transport/               # Transport layer tests (auto-detection)
+│   └── helpers/                 # Test utilities (validators, env config)
 ├── scripts/
 │   └── publish-and-tag.sh       # Automated release workflow
 ├── .github/workflows/
@@ -117,7 +134,9 @@ import {
 
 - **tests/**: Comprehensive test coverage
   - Uses Node.js native test framework with tsx
-  - Tests strategies, network clients, and factory
+  - Split by transport: `http/` for HTTP tests, `ws/` for WebSocket tests
+  - `transport/` for transport layer auto-detection tests
+  - `helpers/` for shared validators and env config
 
 - **scripts/**: Automation scripts
   - Release workflow (build, publish, tag)
@@ -130,8 +149,8 @@ The library uses the **Strategy Pattern** to provide flexible RPC request execut
 
 - **FallbackStrategy**: Tries RPC providers sequentially until one succeeds
   - Minimal overhead (stops at first success)
+  - Returns metadata tracking all attempted providers and response times
   - Best for reliability when providers are generally consistent
-  - No metadata tracking
 
 - **ParallelStrategy**: Executes all RPC providers concurrently
   - Tracks response times and errors for all providers
@@ -146,7 +165,17 @@ The library uses the **Strategy Pattern** to provide flexible RPC request execut
   - Includes metadata with winning response and errors
   - Best for latency-sensitive operations
 
-Strategies can be configured at client creation or switched dynamically using `updateStrategy()`.
+Strategies can be configured at client creation or switched dynamically using `updateStrategy()`. All three strategies support both HTTP and WebSocket transports interchangeably.
+
+### Transport Layer
+
+The library supports both HTTP and WebSocket transports through a unified `JsonRpcTransport` interface:
+
+- **RpcClient** (HTTP): Stateless, one request per fetch call
+- **WebSocketRpcClient**: Persistent connection with request multiplexing, auto-reconnect with exponential backoff, configurable timeouts
+- **createTransport()**: Factory function that auto-detects transport from URL scheme (`http://`/`https://` → HTTP, `ws://`/`wss://` → WebSocket)
+
+HTTP and WebSocket endpoints can be mixed in the same strategy configuration. Call `close()` on the client when done to clean up WebSocket connections.
 
 ### Factory Pattern
 
@@ -191,7 +220,9 @@ Each network has a dedicated client class extending `NetworkClient`:
 | `npm install` | Install project dependencies |
 | `npm run build` | Compile TypeScript to JavaScript (output: `dist/`) |
 | `npm run typecheck` | Type check without code emission |
-| `npm run test` | Run test suite using Node.js native test runner |
+| `npm run test` | Run full test suite (HTTP + WebSocket) |
+| `npm run test:http` | Run HTTP transport tests only |
+| `npm run test:wss` | Run WebSocket transport tests only |
 | `npm run format` | Check code formatting (Biome) |
 | `npm run format:fix` | Auto-fix formatting issues |
 | `npm run lint` | Check linting rules (Biome) |
@@ -219,8 +250,8 @@ The project includes a GitHub Actions workflow ([.github/workflows/npm-publish.y
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/openscan-explorer/@openscan/network-connectors.git
-   cd @openscan/network-connectors
+   git clone https://github.com/openscan-explorer/network-connectors.git
+   cd network-connectors
    ```
 
 2. Install dependencies:
@@ -263,29 +294,26 @@ npm run lint:fix    # Auto-fix linting
 ### Running Tests
 
 ```bash
-npm run test  # Run all tests
+npm run test       # Run all tests (HTTP + WebSocket)
+npm run test:http  # Run HTTP transport tests only
+npm run test:wss   # Run WebSocket transport tests only
 ```
 
 The project uses **Node.js native test framework** with **tsx** for TypeScript execution. No external test frameworks like Jest or Mocha are required.
 
 ### Test Structure
 
-Tests are organized by functionality:
+Tests are split by transport type to validate both HTTP and WebSocket:
 
-- **tests/strategies/**: Tests for FallbackStrategy and ParallelStrategy
-  - Constructor validation
-  - Strategy execution (success and error cases)
-  - Response metadata (parallel strategy)
-  - Inconsistency detection
-
-- **tests/networks/**: Tests for network-specific clients
-  - Client instantiation
-  - Method parameter handling
-  - Type safety checks
-  - Error propagation
-
-- **tests/helpers/**: Test utilities
-  - `validators.ts`: Helper functions for validation (e.g., `isHexString()`, `validateSuccessResult()`)
+- **tests/http/strategies/**: Strategy tests over HTTP transport
+- **tests/http/networks/**: Network client tests over HTTP transport
+- **tests/http/factory/**: ClientFactory tests
+- **tests/ws/strategies/**: Strategy tests over WebSocket transport
+- **tests/ws/networks/**: Network client tests over WebSocket (organized by chain ID subdirectories)
+- **tests/transport/**: Transport layer tests (auto-detection, interface compliance)
+- **tests/helpers/**: Shared test utilities
+  - `validators.ts`: Validators for hex strings, addresses, blocks, transactions, receipts, logs, strategy metadata
+  - `env.ts`: Test URL configuration with optional Alchemy API key support
 
 ### Testing Rules
 
@@ -325,7 +353,8 @@ To add support for a new blockchain network:
    - Add exports to [src/index.ts](src/index.ts)
 
 6. **Add tests**:
-   - Create test file in `tests/networks/<CHAIN_ID>/`
+   - Create HTTP test file in `tests/http/networks/`
+   - Create WebSocket test directory and file in `tests/ws/networks/<CHAIN_ID>/`
    - Test client instantiation, methods, and type safety
 
 7. **Update documentation**:
@@ -480,10 +509,10 @@ Every push to the `main` branch triggers automatic npm publication via GitHub Ac
 
 ## Project Metadata
 
-- **Repository**: [https://github.com/openscan-explorer/@openscan/network-connectors](https://github.com/openscan-explorer/@openscan/network-connectors)
-- **Issues**: [https://github.com/openscan-explorer/@openscan/network-connectors/issues](https://github.com/openscan-explorer/@openscan/network-connectors/issues)
+- **Repository**: [https://github.com/openscan-explorer/network-connectors](https://github.com/openscan-explorer/network-connectors)
+- **Issues**: [https://github.com/openscan-explorer/network-connectors/issues](https://github.com/openscan-explorer/network-connectors/issues)
 - **Package**: [@openscan/network-connectors on npm](https://www.npmjs.com/package/@openscan/network-connectors)
-- **License**: See repository for license information
+- **License**: [MIT](LICENSE)
 
 ## Additional Resources
 
@@ -496,9 +525,13 @@ Every push to the `main` branch triggers automatic npm publication via GitHub Ac
 
 For questions, issues, or contributions:
 
-1. **Check existing issues**: [GitHub Issues](https://github.com/openscan-explorer/@openscan/network-connectors/issues)
+1. **Check existing issues**: [GitHub Issues](https://github.com/openscan-explorer/network-connectors/issues)
 2. **Open a new issue**: Provide detailed description, steps to reproduce, and environment info
 3. **Contribute**: Follow the contribution guidelines above
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ---
 
