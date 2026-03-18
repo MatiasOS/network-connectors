@@ -4,7 +4,7 @@ import type {
   RPCProviderResponse,
   RPCMetadata,
 } from "./strategiesTypes.js";
-import type { RpcClient } from "../RpcClient.js";
+import type { JsonRpcTransport } from "../JsonRpcTransport.js";
 
 interface RaceWinner<T> {
   data: T;
@@ -12,9 +12,9 @@ interface RaceWinner<T> {
 }
 
 export class RaceStrategy implements RequestStrategy {
-  private rpcClients: RpcClient[];
+  private rpcClients: JsonRpcTransport[];
 
-  constructor(rpcClients: RpcClient[]) {
+  constructor(rpcClients: JsonRpcTransport[]) {
     if (rpcClients.length === 0) {
       throw new Error("At least one RPC client must be provided");
     }
@@ -101,5 +101,9 @@ export class RaceStrategy implements RequestStrategy {
 
   getName(): string {
     return "race";
+  }
+
+  async close(): Promise<void> {
+    await Promise.all(this.rpcClients.map((client) => client.close?.()));
   }
 }

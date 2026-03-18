@@ -38,4 +38,10 @@ export interface RequestStrategy {
    * Get the strategy name for logging/debugging
    */
   getName(): string;
+
+  /**
+   * Close underlying transports (e.g., WebSocket connections)
+   * Optional — HTTP transports are stateless and don't need closing
+   */
+  close?(): Promise<void>;
 }

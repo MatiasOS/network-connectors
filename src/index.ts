@@ -303,5 +303,8 @@ export { FallbackStrategy } from "./strategies/fallbackStrategy.js";
 export { ParallelStrategy } from "./strategies/parallelStrategy.js";
 export { RaceStrategy } from "./strategies/raceStrategy.js";
 
-// Legacy RPC client (for backwards compatibility)
+// Transport layer
+export type { JsonRpcTransport } from "./JsonRpcTransport.js";
+export { createTransport } from "./JsonRpcTransport.js";
+export { WebSocketRpcClient } from "./WebSocketRpcClient.js";
 export { RpcClient } from "./RpcClient.js";

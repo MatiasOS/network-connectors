@@ -50,9 +50,19 @@ export class NetworkClient {
    * Update Strategy
    */
   updateStrategy(type: StrategyConfig["type"]) {
+    // Fire-and-forget close on old strategy (no-op for HTTP, closes WebSocket connections)
+    this.strategy.close?.();
     this.strategy = StrategyFactory.create({
       type,
       rpcUrls: this.rpcUrls,
     });
+  }
+
+  /**
+   * Close underlying transports (e.g., WebSocket connections)
+   * Should be called when the client is no longer needed
+   */
+  async close(): Promise<void> {
+    await this.strategy.close?.();
   }
 }
