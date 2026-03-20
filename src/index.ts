@@ -297,11 +297,71 @@ export type {
   BtcBlockFilter,
 } from "./networks/bitcoin/BitcoinTypes.js";
 
+// Solana (CAIP-2 Chain IDs: solana:*)
+export { SolanaClient } from "./networks/solana/SolanaClient.js";
+export {
+  SOLANA_MAINNET,
+  SOLANA_DEVNET,
+  SOLANA_TESTNET,
+} from "./networks/solana/SolanaTypes.js";
+export type {
+  SolanaChainId,
+  Commitment as SolCommitment,
+  Encoding as SolEncoding,
+  SolRpcResponse,
+  SolAccountInfo,
+  SolKeyedAccount,
+  SolTokenAmount,
+  SolTokenAccount,
+  SolTokenLargestAccount,
+  SolTransaction,
+  SolTransactionData,
+  SolTransactionMessage,
+  SolTransactionMeta,
+  SolInnerInstruction,
+  SolTokenBalance,
+  SolLoadedAddresses,
+  SolReturnData,
+  SolBlock,
+  SolReward,
+  SolVersion,
+  SolEpochInfo,
+  SolEpochSchedule,
+  SolInflationGovernor,
+  SolInflationRate,
+  SolInflationReward,
+  SolSupply,
+  SolVoteAccount,
+  SolClusterNode,
+  SolPerfSample,
+  SolBlockProduction,
+  SolHighestSnapshotSlot,
+  SolPrioritizationFee,
+  SolSignatureStatus,
+  SolSignatureInfo,
+  SolStakeActivation,
+  SolLeaderSchedule,
+  SolLargestAccount,
+  SolBlockCommitment,
+  SolLatestBlockhash,
+  SolSimulateTransactionResult,
+  SolAccountNotification,
+  SolProgramNotification,
+  SolLogsNotification,
+  SolSignatureNotification,
+  SolSlotNotification,
+  SolSlotsUpdatesNotification,
+  SolRootNotification,
+  SolBlockNotification,
+  SolVoteNotification,
+} from "./networks/solana/SolanaTypes.js";
+
 // Client Factory (Chain ID-based instantiation)
 export { ClientFactory } from "./factory/ClientRegistry.js";
 export type {
   SupportedChainId,
   SupportedBitcoinChainId,
+  SupportedSolanaChainId,
   SupportedNetwork,
   ClientConstructor,
   ChainIdToClient,
@@ -328,3 +388,4 @@ export type { JsonRpcTransport } from "./JsonRpcTransport.js";
 export { createTransport } from "./JsonRpcTransport.js";
 export { WebSocketRpcClient } from "./WebSocketRpcClient.js";
 export { RpcClient } from "./RpcClient.js";
+export type { JsonRpcNotification } from "./RpcClientTypes.js";
