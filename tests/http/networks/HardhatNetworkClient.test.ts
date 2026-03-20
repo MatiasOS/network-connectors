@@ -747,10 +747,7 @@ describe("HardhatNetworkClient - Transaction Methods [strong]", () => {
     );
 
     // Hardhat may or may not support eth_getProof
-    assert.ok(
-      result.success || !result.success,
-      "Should return a result (success or failure)",
-    );
+    assert.ok(result.success || !result.success, "Should return a result (success or failure)");
   });
 
   it("should attempt createAccessList [weak]", async () => {
@@ -894,30 +891,21 @@ describe("HardhatNetworkClient - TxPool Methods [weak]", () => {
     const result = await client.txPoolStatus();
 
     // May succeed or fail depending on Hardhat version
-    assert.ok(
-      result.success || !result.success,
-      "Should return a result",
-    );
+    assert.ok(result.success || !result.success, "Should return a result");
   });
 
   it("should get txpool content [weak]", async () => {
     const client = new HardhatClient(config);
     const result = await client.txPoolContent();
 
-    assert.ok(
-      result.success || !result.success,
-      "Should return a result",
-    );
+    assert.ok(result.success || !result.success, "Should return a result");
   });
 
   it("should get txpool inspect [weak]", async () => {
     const client = new HardhatClient(config);
     const result = await client.txPoolInspect();
 
-    assert.ok(
-      result.success || !result.success,
-      "Should return a result",
-    );
+    assert.ok(result.success || !result.success, "Should return a result");
   });
 });
 
@@ -958,20 +946,14 @@ describe("HardhatNetworkClient - Debug Methods", () => {
       10,
     );
 
-    assert.ok(
-      result.success || !result.success,
-      "Should return a result",
-    );
+    assert.ok(result.success || !result.success, "Should return a result");
   });
 
   it("should attempt debugAccountRange [weak]", async () => {
     const client = new HardhatClient(config);
     const result = await client.debugAccountRange("latest", "0x0", 10);
 
-    assert.ok(
-      result.success || !result.success,
-      "Should return a result",
-    );
+    assert.ok(result.success || !result.success, "Should return a result");
   });
 
   it("should attempt debugGetModifiedAccountsByHash [weak]", async () => {
@@ -981,10 +963,7 @@ describe("HardhatNetworkClient - Debug Methods", () => {
 
     const result = await client.debugGetModifiedAccountsByHash(blockResult.data!.hash);
 
-    assert.ok(
-      result.success || !result.success,
-      "Should return a result",
-    );
+    assert.ok(result.success || !result.success, "Should return a result");
   });
 
   it("should attempt debugGetModifiedAccountsByNumber [weak]", async () => {
@@ -994,10 +973,7 @@ describe("HardhatNetworkClient - Debug Methods", () => {
 
     const result = await client.debugGetModifiedAccountsByNumber(blockNumResult.data!);
 
-    assert.ok(
-      result.success || !result.success,
-      "Should return a result",
-    );
+    assert.ok(result.success || !result.success, "Should return a result");
   });
 });
 
@@ -1021,10 +997,7 @@ describe("HardhatNetworkClient - Trace Methods [weak]", () => {
 
   it("should fail traceCall (unsupported) [weak]", async () => {
     const client = new HardhatClient(config);
-    const result = await client.traceCall(
-      { to: "0x0000000000000000000000000000000000000001" },
-      {},
-    );
+    const result = await client.traceCall({ to: "0x0000000000000000000000000000000000000001" }, {});
 
     validateFailureResult(result);
   });
