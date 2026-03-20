@@ -7,6 +7,12 @@ interface PendingRequest<T> {
   timer: ReturnType<typeof setTimeout>;
 }
 
+interface SubscriptionHandler {
+  // biome-ignore lint/suspicious/noExplicitAny: subscription payloads vary by method
+  callback: (data: any) => void;
+  errorHandler?: (error: Error) => void;
+}
+
 interface WebSocketRpcClientOptions {
   /** Request timeout in milliseconds (default: 30000) */
   requestTimeoutMs?: number;
@@ -24,6 +30,7 @@ export class WebSocketRpcClient implements JsonRpcTransport {
   private ws: WebSocket | null = null;
   // biome-ignore lint/suspicious/noExplicitAny: pending requests hold generic resolve/reject
   private pendingRequests: Map<number, PendingRequest<any>> = new Map();
+  private subscriptionHandlers: Map<number, SubscriptionHandler> = new Map();
   private connectPromise: Promise<void> | null = null;
   private requestTimeoutMs: number;
   private maxReconnectRetries: number;
@@ -76,6 +83,44 @@ export class WebSocketRpcClient implements JsonRpcTransport {
         );
       }
     });
+  }
+
+  /**
+   * Subscribe to server-pushed notifications
+   * Sends a subscribe request via call(), then registers a handler for incoming notifications
+   *
+   * @param subscribeMethod - The RPC method to subscribe (e.g., "slotSubscribe")
+   * @param unsubscribeMethod - The RPC method to unsubscribe (e.g., "slotUnsubscribe")
+   * @param params - Parameters for the subscribe call
+   * @param callback - Handler invoked for each notification payload
+   * @param errorHandler - Optional handler invoked on connection loss
+   * @returns Object with subscriptionId and unsubscribe() function
+   */
+  async subscribe<T>(
+    subscribeMethod: string,
+    unsubscribeMethod: string,
+    // biome-ignore lint/suspicious/noExplicitAny: subscription params vary by method
+    params: any[],
+    callback: (data: T) => void,
+    errorHandler?: (error: Error) => void,
+  ): Promise<{ subscriptionId: number; unsubscribe: () => Promise<boolean> }> {
+    const subscriptionId = await this.call<number>(subscribeMethod, params);
+
+    this.subscriptionHandlers.set(subscriptionId, {
+      callback,
+      errorHandler,
+    });
+
+    const unsubscribe = async (): Promise<boolean> => {
+      this.subscriptionHandlers.delete(subscriptionId);
+      try {
+        return await this.call<boolean>(unsubscribeMethod, [subscriptionId]);
+      } catch {
+        return false;
+      }
+    };
+
+    return { subscriptionId, unsubscribe };
   }
 
   getUrl(): string {
@@ -186,10 +231,20 @@ export class WebSocketRpcClient implements JsonRpcTransport {
   private setupMessageHandler(ws: WebSocket): void {
     ws.onmessage = (event: MessageEvent) => {
       try {
-        const response: JsonRpcResponse = JSON.parse(String(event.data));
+        const data = JSON.parse(String(event.data));
 
+        // Subscription notification: has method + params.subscription, no id
+        if (data.id == null && data.method && data.params?.subscription != null) {
+          const handler = this.subscriptionHandlers.get(data.params.subscription);
+          if (handler) {
+            handler.callback(data.params.result);
+          }
+          return;
+        }
+
+        // Standard request/response: has id
+        const response: JsonRpcResponse = data;
         if (response.id == null) {
-          // Server-initiated message (e.g., subscription notification) — ignore for now
           return;
         }
 
@@ -230,6 +285,12 @@ export class WebSocketRpcClient implements JsonRpcTransport {
       pending.reject(error);
       this.pendingRequests.delete(id);
     });
+
+    // Notify subscription error handlers and clear all subscriptions
+    this.subscriptionHandlers.forEach((handler) => {
+      handler.errorHandler?.(error);
+    });
+    this.subscriptionHandlers.clear();
   }
 
   private sleep(ms: number): Promise<void> {

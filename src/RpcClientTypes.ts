@@ -18,3 +18,17 @@ export interface JsonRpcResponse<T = any> {
     data?: any;
   };
 }
+
+/**
+ * JSON-RPC 2.0 notification (server-pushed)
+ * Used for WebSocket subscription notifications (e.g., Solana pubsub)
+ */
+// biome-ignore lint/suspicious/noExplicitAny: subscription payloads vary by method
+export interface JsonRpcNotification<T = any> {
+  jsonrpc: "2.0";
+  method: string;
+  params: {
+    subscription: number;
+    result: T;
+  };
+}
