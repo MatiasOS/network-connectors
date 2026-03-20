@@ -9,6 +9,12 @@ import { BaseClient } from "../../../src/networks/8453/BaseClient.js";
 import { ArbitrumClient } from "../../../src/networks/42161/ArbitrumClient.js";
 import { AztecClient } from "../../../src/networks/677868/AztecClient.js";
 import { SepoliaClient } from "../../../src/networks/11155111/SepoliaClient.js";
+import { SolanaClient } from "../../../src/networks/solana/SolanaClient.js";
+import {
+  SOLANA_MAINNET,
+  SOLANA_DEVNET,
+  SOLANA_TESTNET,
+} from "../../../src/networks/solana/SolanaTypes.js";
 import type { StrategyConfig } from "../../../src/strategies/requestStrategy.js";
 
 const TEST_URLS = ["https://rpc.example.com"];
@@ -91,6 +97,27 @@ describe("ClientFactory - createClient", () => {
     assert.ok(client instanceof SepoliaClient, "Should create SepoliaClient instance");
     assert.strictEqual(client.getStrategyName(), "fallback", "Should use fallback strategy");
   });
+
+  it("should create SolanaClient for SOLANA_MAINNET", () => {
+    const client = ClientFactory.createClient(SOLANA_MAINNET, TEST_CONFIG);
+
+    assert.ok(client instanceof SolanaClient, "Should create SolanaClient instance");
+    assert.strictEqual(client.getStrategyName(), "fallback", "Should use fallback strategy");
+  });
+
+  it("should create SolanaClient for SOLANA_DEVNET", () => {
+    const client = ClientFactory.createClient(SOLANA_DEVNET, TEST_CONFIG);
+
+    assert.ok(client instanceof SolanaClient, "Should create SolanaClient instance");
+    assert.strictEqual(client.getStrategyName(), "fallback", "Should use fallback strategy");
+  });
+
+  it("should create SolanaClient for SOLANA_TESTNET", () => {
+    const client = ClientFactory.createClient(SOLANA_TESTNET, TEST_CONFIG);
+
+    assert.ok(client instanceof SolanaClient, "Should create SolanaClient instance");
+    assert.strictEqual(client.getStrategyName(), "fallback", "Should use fallback strategy");
+  });
 });
 
 describe("ClientFactory - createTypedClient", () => {
@@ -147,6 +174,13 @@ describe("ClientFactory - createTypedClient", () => {
     const client = ClientFactory.createTypedClient(11155111, TEST_CONFIG);
 
     assert.ok(client instanceof SepoliaClient, "Should create SepoliaClient instance");
+    assert.strictEqual(client.getStrategyName(), "fallback", "Should use fallback strategy");
+  });
+
+  it("should create typed SolanaClient for SOLANA_DEVNET", () => {
+    const client = ClientFactory.createTypedClient(SOLANA_DEVNET, TEST_CONFIG);
+
+    assert.ok(client instanceof SolanaClient, "Should create SolanaClient instance");
     assert.strictEqual(client.getStrategyName(), "fallback", "Should use fallback strategy");
   });
 });

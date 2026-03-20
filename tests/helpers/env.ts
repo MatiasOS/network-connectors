@@ -18,6 +18,7 @@ const ALCHEMY_NETWORKS: Record<string, string> = {
   "avax-mainnet": "avax-mainnet",
   "eth-sepolia": "eth-sepolia",
   "bitcoin-mainnet": "bitcoin-mainnet",
+  "solana-devnet": "solana-devnet",
 };
 
 export function getTestUrls(network: string, baseUrls: string[]): string[] {
