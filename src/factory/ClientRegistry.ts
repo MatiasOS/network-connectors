@@ -18,6 +18,13 @@ import {
   BITCOIN_SIGNET,
   type BitcoinChainId,
 } from "../networks/bitcoin/BitcoinTypes.js";
+import { SolanaClient } from "../networks/solana/SolanaClient.js";
+import {
+  SOLANA_MAINNET,
+  SOLANA_DEVNET,
+  SOLANA_TESTNET,
+  type SolanaChainId,
+} from "../networks/solana/SolanaTypes.js";
 
 /**
  * Supported EVM chain IDs for the client factory
@@ -41,9 +48,14 @@ export type SupportedChainId =
 export type SupportedBitcoinChainId = BitcoinChainId;
 
 /**
- * All supported network identifiers (EVM chain IDs + Bitcoin CAIP-2 chain IDs)
+ * Supported Solana chain IDs (CAIP-2 format with solana namespace)
  */
-export type SupportedNetwork = SupportedChainId | SupportedBitcoinChainId;
+export type SupportedSolanaChainId = SolanaChainId;
+
+/**
+ * All supported network identifiers (EVM chain IDs + Bitcoin + Solana CAIP-2 chain IDs)
+ */
+export type SupportedNetwork = SupportedChainId | SupportedBitcoinChainId | SupportedSolanaChainId;
 
 /**
  * Constructor type for network clients
@@ -76,11 +88,13 @@ export type ChainIdToClient<T extends SupportedChainId> = T extends 1 | 11155111
 /**
  * Map any network identifier to its specific client type
  */
-export type NetworkToClient<T extends SupportedNetwork> = T extends SupportedBitcoinChainId
-  ? BitcoinClient
-  : T extends SupportedChainId
-    ? ChainIdToClient<T>
-    : NetworkClient;
+export type NetworkToClient<T extends SupportedNetwork> = T extends SupportedSolanaChainId
+  ? SolanaClient
+  : T extends SupportedBitcoinChainId
+    ? BitcoinClient
+    : T extends SupportedChainId
+      ? ChainIdToClient<T>
+      : NetworkClient;
 
 /**
  * Registry mapping EVM chain IDs to their corresponding client constructors
@@ -110,10 +124,26 @@ const BITCOIN_REGISTRY: Record<SupportedBitcoinChainId, typeof BitcoinClient> = 
 };
 
 /**
+ * Registry mapping Solana CAIP-2 chain IDs to the Solana client constructor
+ */
+const SOLANA_REGISTRY: Record<SupportedSolanaChainId, typeof SolanaClient> = {
+  [SOLANA_MAINNET]: SolanaClient,
+  [SOLANA_DEVNET]: SolanaClient,
+  [SOLANA_TESTNET]: SolanaClient,
+};
+
+/**
  * Check if a network identifier is a Bitcoin CAIP-2 chain ID
  */
 function isBitcoinNetwork(network: SupportedNetwork): network is SupportedBitcoinChainId {
   return typeof network === "string" && network.startsWith("bip122:");
+}
+
+/**
+ * Check if a network identifier is a Solana CAIP-2 chain ID
+ */
+function isSolanaNetwork(network: SupportedNetwork): network is SupportedSolanaChainId {
+  return typeof network === "string" && network.startsWith("solana:");
 }
 
 /**
@@ -166,18 +196,30 @@ export class ClientFactory {
    */
   static createClient(chainId: SupportedBitcoinChainId, config: StrategyConfig): BitcoinClient;
   /**
+   * Create a Solana client (CAIP-2 chain ID)
+   */
+  static createClient(chainId: SupportedSolanaChainId, config: StrategyConfig): SolanaClient;
+  /**
    * Create a network client for any supported network
    */
   static createClient(network: SupportedNetwork, config: StrategyConfig): NetworkClient;
   /**
    * Create a network client for the specified network identifier
    *
-   * @param network - The network identifier (EVM chain ID or Bitcoin CAIP-2 chain ID)
+   * @param network - The network identifier (EVM chain ID, Bitcoin or Solana CAIP-2 chain ID)
    * @param config - Strategy configuration with RPC URLs and strategy type
    * @returns NetworkClient instance for the specified network
    * @throws Error if the network is not supported
    */
   static createClient(network: SupportedNetwork, config: StrategyConfig): NetworkClient {
+    if (isSolanaNetwork(network)) {
+      const ClientClass = SOLANA_REGISTRY[network];
+      if (!ClientClass) {
+        throw new Error(`Unsupported Solana network: ${network}`);
+      }
+      return new ClientClass(config);
+    }
+
     if (isBitcoinNetwork(network)) {
       const ClientClass = BITCOIN_REGISTRY[network];
       if (!ClientClass) {
@@ -197,9 +239,9 @@ export class ClientFactory {
    * Create a type-specific network client for the specified network
    * Automatically infers the correct client type based on the network identifier
    *
-   * @param network - The network identifier (EVM chain ID or Bitcoin CAIP-2 chain ID)
+   * @param network - The network identifier (EVM chain ID, Bitcoin or Solana CAIP-2 chain ID)
    * @param config - Strategy configuration with RPC URLs and strategy type
-   * @returns Typed client instance (e.g., BitcoinClient for BITCOIN_MAINNET, EthereumClient for 1)
+   * @returns Typed client instance (e.g., SolanaClient for SOLANA_MAINNET, BitcoinClient for BITCOIN_MAINNET)
    * @throws Error if the network is not supported
    */
   static createTypedClient<T extends SupportedNetwork>(
