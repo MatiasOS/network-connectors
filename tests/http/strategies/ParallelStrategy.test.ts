@@ -3,6 +3,7 @@ import assert from "node:assert";
 import { ParallelStrategy } from "../../../src/strategies/parallelStrategy.js";
 import { RpcClient } from "../../../src/RpcClient.js";
 import { getTestUrls } from "../../helpers/env.js";
+import type { JsonRpcTransport } from "../../../src/JsonRpcTransport.js";
 
 const TEST_URLS = getTestUrls("eth-mainnet", [
   "https://eth.merkle.io",
@@ -332,5 +333,111 @@ describe("ParallelStrategy - Performance Metrics", () => {
     for (const response of successfulResponses) {
       assert.ok(response.responseTime < 30000, "Response time should be reasonable (< 30s)");
     }
+  });
+});
+
+// =============================================================================
+// Inconsistency detection — offline, using stub transports
+//
+// These use fake transports rather than live providers because divergence between
+// real endpoints cannot be provoked on demand. Regression guard for the hashing
+// bug where the top-level keys were passed to JSON.stringify as a replacer, which
+// is an allowlist applied at every depth and so blanked out every nested object.
+// =============================================================================
+
+function stubTransport(url: string, payload: unknown): JsonRpcTransport {
+  return {
+    async call<T>(): Promise<T> {
+      return payload as T;
+    },
+    getUrl: () => url,
+  };
+}
+
+describe("ParallelStrategy - Inconsistency Detection [strong]", () => {
+  it("should flag providers that differ only in a nested field", async () => {
+    const strategy = new ParallelStrategy([
+      stubTransport("https://a.example", {
+        blocks: 100,
+        chainSupply: { chainValue: 16923157.97, chainValueZat: 1692315797804480 },
+      }),
+      stubTransport("https://b.example", {
+        blocks: 100,
+        chainSupply: { chainValue: 1, chainValueZat: 1 },
+      }),
+    ]);
+
+    const result = await strategy.execute("getblockchaininfo", []);
+
+    assert.strictEqual(result.success, true, "Both providers responded");
+    assert.strictEqual(
+      result.metadata?.hasInconsistencies,
+      true,
+      "Divergence below the top level must be detected",
+    );
+  });
+
+  it("should flag providers that differ in a deeply nested array element", async () => {
+    const strategy = new ParallelStrategy([
+      stubTransport("https://a.example", { result: { logs: [{ data: { value: 1 } }] } }),
+      stubTransport("https://b.example", { result: { logs: [{ data: { value: 2 } }] } }),
+    ]);
+
+    const result = await strategy.execute("eth_getLogs", []);
+
+    assert.strictEqual(result.metadata?.hasInconsistencies, true, "Should detect the difference");
+  });
+
+  it("should not flag identical data written in a different key order", async () => {
+    const strategy = new ParallelStrategy([
+      stubTransport("https://a.example", { a: 1, nested: { x: 1, y: 2 } }),
+      stubTransport("https://b.example", { nested: { y: 2, x: 1 }, a: 1 }),
+    ]);
+
+    const result = await strategy.execute("eth_chainId", []);
+
+    assert.strictEqual(
+      result.metadata?.hasInconsistencies,
+      false,
+      "Key order is not a real inconsistency",
+    );
+  });
+
+  it("should treat array order as significant", async () => {
+    const strategy = new ParallelStrategy([
+      stubTransport("https://a.example", { tx: ["a", "b"] }),
+      stubTransport("https://b.example", { tx: ["b", "a"] }),
+    ]);
+
+    const result = await strategy.execute("eth_getBlockByNumber", []);
+
+    assert.strictEqual(
+      result.metadata?.hasInconsistencies,
+      true,
+      "Reordered arrays are a genuine divergence",
+    );
+  });
+
+  it("should compare scalar responses", async () => {
+    const strategy = new ParallelStrategy([
+      stubTransport("https://a.example", 3477456),
+      stubTransport("https://b.example", 3477457),
+    ]);
+
+    const result = await strategy.execute("getblockcount", []);
+
+    assert.strictEqual(result.metadata?.hasInconsistencies, true, "Scalars must still compare");
+  });
+
+  it("should agree when every provider returns the same payload", async () => {
+    const payload = { blocks: 100, chainSupply: { chainValue: 5, chainValueZat: 500 } };
+    const strategy = new ParallelStrategy([
+      stubTransport("https://a.example", payload),
+      stubTransport("https://b.example", { ...payload }),
+    ]);
+
+    const result = await strategy.execute("getblockchaininfo", []);
+
+    assert.strictEqual(result.metadata?.hasInconsistencies, false, "Identical data must agree");
   });
 });
