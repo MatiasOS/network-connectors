@@ -119,3 +119,53 @@ describe("RpcEndpoint - headers are actually transmitted [strong]", () => {
     assert.ok(result > 0, "Block count should be positive");
   });
 });
+
+describe("RpcEndpoint - WebSocket endpoints reject headers [strong]", () => {
+  it("should throw when headers are supplied for a wss endpoint", () => {
+    assert.throws(
+      () => createTransport({ url: WS_URL, headers: { "x-api-key": "k" } }),
+      /Headers are not supported for WebSocket endpoints/,
+      "Silently dropping the credential would fail later and far from the cause",
+    );
+  });
+
+  it("should throw for a ws:// endpoint too", () => {
+    assert.throws(
+      () => createTransport({ url: "ws://localhost:8545", headers: { authorization: "Bearer x" } }),
+      /Headers are not supported for WebSocket endpoints/,
+    );
+  });
+
+  it("should still accept a WebSocket endpoint object with an empty header map", () => {
+    const transport = createTransport({ url: WS_URL, headers: {} });
+    assert.ok(transport instanceof WebSocketRpcClient, "An empty map is not a credential");
+  });
+});
+
+describe("RpcEndpoint - configuration is not caller-mutable [strong]", () => {
+  it("should not expose the internal endpoint list for mutation", () => {
+    const client = new NetworkClient({ type: "fallback", rpcUrls: [HTTP_URL] });
+
+    const endpoints = client.getRpcEndpoints();
+    endpoints.push("https://attacker.example");
+
+    assert.deepStrictEqual(
+      client.getRpcEndpoints(),
+      [HTTP_URL],
+      "Mutating the returned array must not reconfigure the client",
+    );
+  });
+
+  it("should not track later mutation of the caller's config array", () => {
+    const rpcUrls: (string | RpcEndpoint)[] = [HTTP_URL];
+    const client = new NetworkClient({ type: "fallback", rpcUrls });
+
+    rpcUrls.push("https://attacker.example");
+
+    assert.deepStrictEqual(
+      client.getRpcUrls(),
+      [HTTP_URL],
+      "The client should have copied the array it was given",
+    );
+  });
+});

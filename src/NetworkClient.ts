@@ -12,7 +12,9 @@ export class NetworkClient {
 
   constructor(config: StrategyConfig) {
     this.strategy = StrategyFactory.create(config);
-    this.rpcUrls = config.rpcUrls;
+    // Copy so later mutation of the caller's array cannot reconfigure this client.
+    // Shallow by design — endpoint objects, and so their headers, stay shared.
+    this.rpcUrls = [...config.rpcUrls];
   }
 
   /**
@@ -52,9 +54,13 @@ export class NetworkClient {
 
   /**
    * Get the configured endpoints as provided, preserving any per-endpoint headers
+   *
+   * Returns a copy, so callers cannot reconfigure the client by mutating the result.
+   * The copy is shallow: endpoint objects are shared, so treat their `headers` as
+   * read-only.
    */
   getRpcEndpoints(): (string | RpcEndpoint)[] {
-    return this.rpcUrls;
+    return [...this.rpcUrls];
   }
 
   /**

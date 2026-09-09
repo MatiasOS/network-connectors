@@ -33,14 +33,26 @@ export interface RpcEndpoint {
  * - http:// or https:// → RpcClient (HTTP)
  *
  * Accepts either a plain URL string or an {@link RpcEndpoint} carrying headers.
- * Headers are applied to HTTP transports only — the WebSocket handshake does not
- * support custom headers, so they are ignored for ws:// and wss:// URLs.
+ * Headers apply to HTTP transports only — the WebSocket handshake takes no custom
+ * headers.
+ *
+ * @throws Error if headers are supplied for a ws:// or wss:// endpoint. Silently
+ * dropping them would produce an unauthenticated connection that fails later and
+ * far from its cause, and there is no correct way to honour the request.
  */
 export function createTransport(endpoint: string | RpcEndpoint): JsonRpcTransport {
   const url = typeof endpoint === "string" ? endpoint : endpoint.url;
+  const headers = typeof endpoint === "string" ? undefined : endpoint.headers;
 
   if (url.startsWith("ws://") || url.startsWith("wss://")) {
+    if (headers && Object.keys(headers).length > 0) {
+      throw new Error(
+        `Headers are not supported for WebSocket endpoints (${url}). The WebSocket ` +
+          `handshake takes no custom headers — use an HTTP endpoint for authenticated ` +
+          `requests, or move the credential into the URL if the provider allows it.`,
+      );
+    }
     return new WebSocketRpcClient(url);
   }
-  return new RpcClient(url, typeof endpoint === "string" ? undefined : endpoint.headers);
+  return new RpcClient(url, headers);
 }

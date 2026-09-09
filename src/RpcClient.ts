@@ -12,7 +12,8 @@ export class RpcClient implements JsonRpcTransport {
    */
   constructor(url: string, headers?: Record<string, string>) {
     this.url = url;
-    this.headers = headers ?? {};
+    // Copy so later mutation of the caller's object cannot change what we send.
+    this.headers = { ...headers };
   }
 
   // biome-ignore lint/suspicious/noExplicitAny: <TODO>
@@ -27,8 +28,10 @@ export class RpcClient implements JsonRpcTransport {
     const response = await fetch(this.url, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
+        // Configured headers first: the body is always JSON, so Content-Type is not
+        // the caller's to override.
         ...this.headers,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(request),
     });
