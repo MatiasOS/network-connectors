@@ -22,14 +22,24 @@ const ALCHEMY_NETWORKS: Record<string, string> = {
   "solana-devnet": "solana-devnet",
 };
 
-export function getTestUrls(network: string, baseUrls: string[]): string[] {
+/**
+ * A list guaranteed to hold at least one entry.
+ *
+ * Test suites index these lists directly (`URLS[0]`) to build single-transport
+ * clients. Typing them as non-empty keeps that honest under
+ * `noUncheckedIndexedAccess` without sprinkling non-null assertions through
+ * every test file.
+ */
+export type NonEmpty<T> = [T, ...T[]];
+
+export function getTestUrls(network: string, baseUrls: NonEmpty<string>): NonEmpty<string> {
   if (!ALCHEMY_API_KEY) return baseUrls;
   const subdomain = ALCHEMY_NETWORKS[network];
   if (!subdomain) return baseUrls;
   return [...baseUrls, `https://${subdomain}.g.alchemy.com/v2/${ALCHEMY_API_KEY}`];
 }
 
-export function getTestWsUrls(network: string, baseUrls: string[]): string[] {
+export function getTestWsUrls(network: string, baseUrls: NonEmpty<string>): NonEmpty<string> {
   if (!ALCHEMY_API_KEY) return baseUrls;
   const subdomain = ALCHEMY_NETWORKS[network];
   if (!subdomain) return baseUrls;
@@ -67,8 +77,12 @@ export function withTatumKey(url: string): string | RpcEndpoint {
  * available). Setting ZCASH_RPC_URL prepends a self-hosted zebrad or another
  * provider, which takes priority under the fallback strategy.
  */
-export function getZcashTestEndpoints(baseUrls: string[]): (string | RpcEndpoint)[] {
-  const endpoints = baseUrls.map(withTatumKey);
+export function getZcashTestEndpoints(baseUrls: NonEmpty<string>): NonEmpty<string | RpcEndpoint> {
+  const [first, ...rest] = baseUrls;
+  const endpoints: NonEmpty<string | RpcEndpoint> = [
+    withTatumKey(first),
+    ...rest.map(withTatumKey),
+  ];
   const override = process.env.ZCASH_RPC_URL;
   return override ? [override, ...endpoints] : endpoints;
 }

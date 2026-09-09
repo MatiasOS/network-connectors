@@ -4,7 +4,7 @@ import { RpcClient } from "../../src/RpcClient.js";
 import { isHexString } from "../helpers/validators.js";
 import { getTestUrls } from "../helpers/env.js";
 
-const TEST_URLS: string[] = getTestUrls("eth-mainnet", [
+const TEST_URLS = getTestUrls("eth-mainnet", [
   "https://eth.merkle.io",
   "https://ethereum.publicnode.com",
 ]);
