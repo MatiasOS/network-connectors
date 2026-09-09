@@ -328,7 +328,7 @@ describe("ZcashClient - Method Signatures [strong]", () => {
 describe("ZcashClient - Explorer Chain Methods [strong]", () => {
   const client = new ZcashClient(config);
 
-  it("should get blockchain info", async () => {
+  it("should get blockchain info", { ...needsBudget }, async () => {
     const result = await client.getBlockchainInfo();
 
     assert.strictEqual(result.success, true, "Should succeed");
@@ -337,19 +337,23 @@ describe("ZcashClient - Explorer Chain Methods [strong]", () => {
     assert.strictEqual(result.data.chain, "main", "Should be mainnet");
   });
 
-  it("should get the genesis block hash matching the CAIP-2 constant", async () => {
-    const result = await client.getBlockHash(0);
+  it(
+    "should get the genesis block hash matching the CAIP-2 constant",
+    { ...needsBudget },
+    async () => {
+      const result = await client.getBlockHash(0);
 
-    assert.strictEqual(result.success, true, "Should succeed");
-    assert.strictEqual(result.data, GENESIS_BLOCK_HASH, "Should return the genesis hash");
+      assert.strictEqual(result.success, true, "Should succeed");
+      assert.strictEqual(result.data, GENESIS_BLOCK_HASH, "Should return the genesis hash");
 
-    const reference = ZCASH_MAINNET.split(":")[1];
-    assert.strictEqual(
-      result.data?.substring(0, 32),
-      reference,
-      "Genesis hash prefix should match the CAIP-2 chain ID reference",
-    );
-  });
+      const reference = ZCASH_MAINNET.split(":")[1];
+      assert.strictEqual(
+        result.data?.substring(0, 32),
+        reference,
+        "Genesis hash prefix should match the CAIP-2 chain ID reference",
+      );
+    },
+  );
 
   it("should get the block count", { ...needsBudget }, async () => {
     const result = await client.getBlockCount();
@@ -465,7 +469,7 @@ describe("ZcashClient - Explorer Transaction Methods [strong]", () => {
 describe("ZcashClient - Explorer Mempool Methods [strong]", () => {
   const client = new ZcashClient(config);
 
-  it("should get mempool info", async () => {
+  it("should get mempool info", { ...needsBudget }, async () => {
     const result = await client.getMempoolInfo();
 
     assert.strictEqual(result.success, true, "Should succeed");
