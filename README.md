@@ -19,7 +19,7 @@ TypeScript library providing unified, type-safe RPC client interfaces for multip
 - **Zero Dependencies**: Pure Node.js implementation with no external runtime dependencies
 - **ES Modules**: Native ESM support for modern JavaScript environments
 - **Factory Pattern**: Type-safe client instantiation based on chain IDs (numeric for EVM, CAIP-2 for Bitcoin)
-- **Inconsistency Detection**: Parallel strategy can detect RPC provider data divergence
+- **Inconsistency Detection**: Parallel strategy detects RPC provider data divergence, comparing responses in full rather than only their top-level fields
 - **Resource Lifecycle**: `close()` method for clean shutdown of WebSocket connections
 
 ## Installation
@@ -123,6 +123,8 @@ import { ZCASH_MAINNET, ZCASH_TESTNET } from "@openscan/network-connectors";
 
 Note some parameter conventions differ from Bitcoin: `getBlock`, `getBlockHeader` and `zGetTreestate` take a block hash **or a height as a decimal string** (`getBlock("3444000", 1)`); `getRawTransaction` takes a numeric verbosity (`0` or `1`) rather than a boolean; and the address-index methods take a single object argument (`getAddressBalance({ addresses: ["t1..."] })`).
 
+Because Zebra's RPC server is HTTP-only, `ZcashClient` rejects `ws://`/`wss://` endpoints at construction rather than letting them hang until the transport times out.
+
 ## Authenticated RPC Endpoints
 
 Endpoints that require an API key header can be configured as objects instead of plain URL strings. Headers are scoped per endpoint, so a credential is never sent to the other providers in the same list:
@@ -137,7 +139,22 @@ const client = ClientFactory.createClient(ZCASH_MAINNET, {
 });
 ```
 
-Headers apply to HTTP transports only — the WebSocket handshake does not support custom headers.
+Headers apply to HTTP transports only. Supplying them for a `ws://`/`wss://` endpoint **throws**, rather than silently producing an unauthenticated connection that fails later:
+
+```typescript
+createTransport({ url: "wss://example.com", headers: { "x-api-key": "..." } });
+// Error: Headers are not supported for WebSocket endpoints (wss://example.com).
+```
+
+### Reading endpoints back
+
+```typescript
+client.getRpcUrls();      // string[] — endpoint objects normalized to their URL,
+                          // so configured headers are never exposed
+client.getRpcEndpoints(); // (string | RpcEndpoint)[] — the entries as configured
+```
+
+Both return copies, and the client copies the `rpcUrls` array it was given, so a client cannot be reconfigured after construction by mutating either array. `getRpcEndpoints()` is a *shallow* copy: endpoint objects are shared, so treat their `headers` as read-only.
 
 ## Project Structure
 
@@ -207,7 +224,8 @@ The library uses the **Strategy Pattern** to provide flexible RPC request execut
 
 - **ParallelStrategy**: Executes all RPC providers concurrently
   - Tracks response times and errors for all providers
-  - Detects data inconsistencies using response hashing
+  - Detects data inconsistencies by hashing each canonicalized response, so divergence in nested fields is caught too
+  - Treats object key order as insignificant and array order as significant
   - Returns comprehensive metadata for debugging
   - Best for detecting provider divergence
 
@@ -272,10 +290,10 @@ Each network has a dedicated client class extending `NetworkClient`:
 |---------|-------------|
 | `npm install` | Install project dependencies |
 | `npm run build` | Compile TypeScript to JavaScript (output: `dist/`) |
-| `npm run typecheck` | Type check without code emission |
-| `npm run test` | Run full test suite (HTTP + WebSocket) |
-| `npm run test:http` | Run HTTP transport tests only |
-| `npm run test:wss` | Run WebSocket transport tests only |
+| `npm run typecheck` | Type check `src` and `tests` without code emission |
+| `npm run test` | Run the full test suite (HTTP + WebSocket) |
+| `npm run test:http` | Run HTTP and transport tests |
+| `npm run test:wss` | Run WebSocket tests only |
 | `npm run format` | Check code formatting (Biome) |
 | `npm run format:fix` | Auto-fix formatting issues |
 | `npm run lint` | Check linting rules (Biome) |
@@ -284,7 +302,15 @@ Each network has a dedicated client class extending `NetworkClient`:
 
 ### CI/CD Automation
 
-The project includes a GitHub Actions workflow ([.github/workflows/npm-publish.yml](.github/workflows/npm-publish.yml)) that automatically publishes to npm on every push to the `main` branch:
+Two GitHub Actions workflows:
+
+**[ci.yml](.github/workflows/ci.yml)** — runs on pull requests and pushes to `main`:
+
+- **`quality`** (blocking): `npm run check` → `npm run typecheck` → `npm run build`
+- **`test`** (non-blocking): `npm run test:http`. Tests hit live public RPC endpoints, so a
+  red run can mean a provider is down rather than a defect
+
+**[npm-publish.yml](.github/workflows/npm-publish.yml)** — publishes to npm on every push to `main`:
 
 - **Trigger**: Push to `main` branch
 - **Environment**: ubuntu-latest, Node.js 24
@@ -348,11 +374,27 @@ npm run lint:fix    # Auto-fix linting
 
 ```bash
 npm run test       # Run all tests (HTTP + WebSocket)
-npm run test:http  # Run HTTP transport tests only
-npm run test:wss   # Run WebSocket transport tests only
+npm run test:http  # Run HTTP and transport tests
+npm run test:wss   # Run WebSocket tests only
 ```
 
 The project uses **Node.js native test framework** with **tsx** for TypeScript execution. No external test frameworks like Jest or Mocha are required.
+
+Tests make **real RPC calls against live endpoints** — nothing is mocked — so a failure can mean a provider is down or rate-limiting rather than a defect.
+
+#### Test credentials
+
+Everything runs without configuration; tests needing a credential skip instead of failing. To run more of the suite, copy `.env.example` to `.env` and fill in what you have:
+
+| Variable | Unlocks |
+|----------|---------|
+| `ALCHEMY_API_KEY` | Adds an Alchemy endpoint to the EVM test URL lists |
+| `TATUM_API_KEY` | Lifts Tatum's 5 req/min anonymous cap, enabling the live Zcash tests |
+| `ZCASH_RPC_URL` | A self-hosted `zebrad`, enabling the shielded (`z_*`), address-index and node-admin tests that no hosted free endpoint exposes |
+
+Values left in the `<placeholder>` form are treated as unset, so copying `.env.example` verbatim behaves exactly like having no `.env`.
+
+A local Hardhat node on `127.0.0.1:8545` is needed for the chain-31337 tests; without one they fail rather than skip.
 
 ### Test Structure
 
