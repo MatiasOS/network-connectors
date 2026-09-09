@@ -5,6 +5,7 @@ import { RpcClient } from "../../src/RpcClient.js";
 import { WebSocketRpcClient } from "../../src/WebSocketRpcClient.js";
 import { NetworkClient } from "../../src/NetworkClient.js";
 import type { RpcEndpoint, StrategyConfig } from "../../src/strategies/requestStrategy.js";
+import { hasTatumApiKey, withTatumKey } from "../helpers/env.js";
 
 const HTTP_URL = "https://ethereum.publicnode.com";
 const WS_URL = "wss://ethereum.publicnode.com";
@@ -96,12 +97,18 @@ describe("RpcEndpoint - NetworkClient URL normalization [strong]", () => {
   });
 });
 
-describe("RpcEndpoint - headers are actually transmitted [strong]", () => {
-  // Tatum rejects a bad API key with HTTP 401 but serves anonymous requests, so the
-  // two outcomes distinguish "header sent" from "header dropped" against a real server.
+describe("RpcEndpoint - headers reach a real provider [strong]", () => {
+  // What goes onto the wire is asserted precisely, and offline, in
+  // rpcClientHeaders.test.ts. This one check is about the other half — that a real
+  // provider reads the header we send — so it needs a live endpoint.
+  //
+  // Gated on a configured key because it is otherwise served from Tatum's anonymous
+  // bucket (5 req/min shared across all its hosts), which makes it fail with a 429
+  // that says nothing about the code.
   const TATUM_URL = "https://zcash-mainnet-zebrad.gateway.tatum.io";
+  const needsKey = { skip: hasTatumApiKey ? false : "requires TATUM_API_KEY" };
 
-  it("should send configured headers on the request", async () => {
+  it("should send configured headers on the request", { ...needsKey }, async () => {
     const client = new RpcClient(TATUM_URL, { "x-api-key": "definitely-not-a-valid-key" });
 
     await assert.rejects(
@@ -111,11 +118,14 @@ describe("RpcEndpoint - headers are actually transmitted [strong]", () => {
     );
   });
 
-  it("should not send an auth header when none is configured", async () => {
-    const client = new RpcClient(TATUM_URL);
-    const result = await client.call<number>("getblockcount");
+  it("should authenticate with a valid key", { ...needsKey }, async () => {
+    const endpoint = withTatumKey(TATUM_URL);
+    assert.notStrictEqual(typeof endpoint, "string", "A configured key should yield an endpoint");
 
-    assert.strictEqual(typeof result, "number", "Anonymous access should still succeed");
+    const transport = createTransport(endpoint);
+    const result = await transport.call<number>("getblockcount");
+
+    assert.strictEqual(typeof result, "number", "Authenticated access should succeed");
     assert.ok(result > 0, "Block count should be positive");
   });
 });
