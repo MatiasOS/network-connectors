@@ -304,6 +304,7 @@ export type {
   ZcashChainId,
   ZecHashOrHeight,
   ZecValuePoolId,
+  ZecShieldedPool,
   ZecUpgradeStatus,
   ZecValuePoolBalance,
   ZecChainSupply,

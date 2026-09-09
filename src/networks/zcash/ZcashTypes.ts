@@ -58,6 +58,14 @@ export type ZecValuePoolId =
  */
 export type ZecUpgradeStatus = "active" | "pending";
 
+/**
+ * Note commitment pools that can be walked by subtree index.
+ *
+ * Narrower than {@link ZecValuePoolId}: only Sapling and Orchard maintain the
+ * incremental note commitment trees that `z_getsubtreesbyindex` reads.
+ */
+export type ZecShieldedPool = "sapling" | "orchard";
+
 // ===== Chain / blockchain info =====
 
 /**
@@ -453,7 +461,7 @@ export interface ZecSubtree {
  * Response from z_getsubtreesbyindex
  */
 export interface ZecSubtrees {
-  pool: string;
+  pool: ZecShieldedPool;
   start_index: number;
   subtrees: ZecSubtree[];
 }

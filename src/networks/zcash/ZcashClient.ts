@@ -14,6 +14,7 @@
  */
 
 import { NetworkClient } from "../../NetworkClient.js";
+import type { StrategyConfig } from "../../strategies/requestStrategy.js";
 import type { StrategyResult } from "../../strategies/strategiesTypes.js";
 import type {
   ZecAddressBalance,
@@ -37,6 +38,7 @@ import type {
   ZecNetworkInfo,
   ZecPeerInfo,
   ZecRawTransaction,
+  ZecShieldedPool,
   ZecStandardFee,
   ZecSubmitBlockResult,
   ZecSubtrees,
@@ -48,6 +50,26 @@ import type {
 } from "./ZcashTypes.js";
 
 export class ZcashClient extends NetworkClient {
+  /**
+   * @throws Error if any endpoint is a ws:// or wss:// URL. Zebra builds its RPC
+   * server `.http_only()`, so a WebSocket endpoint can never connect — without this
+   * guard it would hang for the transport's 30s request timeout and then burn its
+   * reconnect retries before failing.
+   */
+  constructor(config: StrategyConfig) {
+    super(config);
+
+    const wsUrls = this.getRpcUrls().filter(
+      (url) => url.startsWith("ws://") || url.startsWith("wss://"),
+    );
+    if (wsUrls.length > 0) {
+      throw new Error(
+        `Zcash does not support WebSocket endpoints (${wsUrls.join(", ")}). Zebra's RPC ` +
+          `server is HTTP-only — use an http:// or https:// URL.`,
+      );
+    }
+  }
+
   // ===== Chain & Blocks =====
 
   /**
@@ -256,7 +278,7 @@ export class ZcashClient extends NetworkClient {
    * @param limit - Maximum number of subtrees to return
    */
   async zGetSubtreesByIndex(
-    pool: string,
+    pool: ZecShieldedPool,
     startIndex: number,
     limit?: number,
   ): Promise<StrategyResult<ZecSubtrees>> {
