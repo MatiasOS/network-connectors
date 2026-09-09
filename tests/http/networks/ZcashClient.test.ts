@@ -5,13 +5,8 @@ import { ZCASH_MAINNET, ZCASH_TESTNET } from "../../../src/networks/zcash/ZcashT
 import type {
   ZecBlock,
   ZecBlockHeader,
-  ZecBlockVerbose,
   ZecBlockchainInfo,
-  ZecMempoolInfo,
-  ZecNetworkInfo,
   ZecRawTransaction,
-  ZecTxOut,
-  ZecValidateAddress,
 } from "../../../src/networks/zcash/ZcashTypes.js";
 import { ClientFactory } from "../../../src/factory/ClientRegistry.js";
 import { BitcoinClient } from "../../../src/networks/bitcoin/BitcoinClient.js";
@@ -219,6 +214,26 @@ describe("ZcashClient - Constructor [strong]", () => {
     client.updateStrategy("race");
     assert.strictEqual(client.getStrategyName(), "race");
   });
+
+  it("should reject WebSocket endpoints", () => {
+    // Zebra builds its RPC server .http_only(), so a ws:// endpoint can never
+    // connect — without this guard it hangs for the 30s transport timeout first.
+    assert.throws(
+      () => new ZcashClient({ type: "fallback", rpcUrls: ["wss://zcash.example"] }),
+      /does not support WebSocket endpoints/,
+      "A wss:// endpoint should be rejected at construction",
+    );
+
+    assert.throws(
+      () =>
+        new ZcashClient({
+          type: "fallback",
+          rpcUrls: ["https://zcash.example", "ws://127.0.0.1:8232"],
+        }),
+      /does not support WebSocket endpoints/,
+      "A ws:// endpoint mixed in with HTTP should still be rejected",
+    );
+  });
 });
 
 describe("ZcashClient - Factory Integration [strong]", () => {
@@ -388,9 +403,9 @@ describe("ZcashClient - Explorer Block Methods [strong]", () => {
 
     assert.strictEqual(result.success, true, "Should succeed");
     assert.ok(result.data, "Should have data");
-    validateBlock(result.data as ZecBlock);
-    assert.strictEqual((result.data as ZecBlock).height, 0, "Should be the genesis block");
-    assert.strictEqual((result.data as ZecBlock).hash, GENESIS_BLOCK_HASH);
+    validateBlock(result.data);
+    assert.strictEqual(result.data.height, 0, "Should be the genesis block");
+    assert.strictEqual(result.data.hash, GENESIS_BLOCK_HASH);
   });
 
   it("should get a block header", { ...needsBudget }, async () => {
@@ -398,8 +413,8 @@ describe("ZcashClient - Explorer Block Methods [strong]", () => {
 
     assert.strictEqual(result.success, true, "Should succeed");
     assert.ok(result.data, "Should have data");
-    validateBlockHeader(result.data as ZecBlockHeader);
-    assert.strictEqual((result.data as ZecBlockHeader).height, 0);
+    validateBlockHeader(result.data);
+    assert.strictEqual(result.data.height, 0);
   });
 
   it("should get a block with verbosity 2 (full transactions)", { ...needsBudget }, async () => {
@@ -408,7 +423,7 @@ describe("ZcashClient - Explorer Block Methods [strong]", () => {
     assert.strictEqual(result.success, true, "Should succeed");
     assert.ok(result.data, "Should have data");
 
-    const block = result.data as ZecBlockVerbose;
+    const block = result.data;
     validateBlockHeader(block);
     assert.ok(Array.isArray(block.tx), "tx should be an array");
     assert.ok(block.tx.length > 0, "Block should contain transactions");
@@ -425,7 +440,8 @@ describe("ZcashClient - Explorer Block Methods [strong]", () => {
       const result = await client.getBlock("3444000", 1);
 
       assert.strictEqual(result.success, true, "Should succeed");
-      const block = result.data as ZecBlock;
+      assert.ok(result.data, "Should have data");
+      const block = result.data;
 
       // finalorchardroot only exists on post-NU5 blocks
       assertString(block.finalorchardroot, "finalorchardroot");
@@ -452,7 +468,7 @@ describe("ZcashClient - Explorer Transaction Methods [strong]", () => {
     const result = await client.getRawTransaction(txid, 1);
     assert.strictEqual(result.success, true, "Should succeed");
     assert.ok(result.data, "Should have data");
-    validateRawTransaction(result.data as ZecRawTransaction);
+    validateRawTransaction(result.data);
   });
 
   it("should return hex for a raw transaction at verbose 0", { ...needsBudget }, async () => {
@@ -475,7 +491,7 @@ describe("ZcashClient - Explorer Mempool Methods [strong]", () => {
     assert.strictEqual(result.success, true, "Should succeed");
     assert.ok(result.data, "Should have data");
 
-    const info = result.data as ZecMempoolInfo;
+    const info = result.data;
     assertNumber(info.size, "size");
     assertNumber(info.bytes, "bytes");
     assertNumber(info.usage, "usage");
@@ -499,7 +515,8 @@ describe("ZcashClient - Explorer Utility Methods [strong]", () => {
     const result = await client.validateAddress(VALID_TRANSPARENT_ADDRESS);
 
     assert.strictEqual(result.success, true, "Should succeed");
-    const data = result.data as ZecValidateAddress;
+    assert.ok(result.data, "Should have data");
+    const data = result.data;
     assert.strictEqual(data.isvalid, true, "Address should be valid");
     assert.strictEqual(data.address, VALID_TRANSPARENT_ADDRESS);
   });
@@ -508,18 +525,16 @@ describe("ZcashClient - Explorer Utility Methods [strong]", () => {
     const result = await client.validateAddress(INVALID_ADDRESS);
 
     assert.strictEqual(result.success, true, "Call should succeed");
-    assert.strictEqual(
-      (result.data as ZecValidateAddress).isvalid,
-      false,
-      "Address should be reported invalid",
-    );
+    assert.ok(result.data, "Should have data");
+    assert.strictEqual(result.data.isvalid, false, "Address should be reported invalid");
   });
 
   it("should get network info", { ...needsBudget }, async () => {
     const result = await client.getNetworkInfo();
 
     assert.strictEqual(result.success, true, "Should succeed");
-    const info = result.data as ZecNetworkInfo;
+    assert.ok(result.data, "Should have data");
+    const info = result.data;
     assertNumber(info.version, "version");
     assertString(info.subversion, "subversion");
     assertNumber(info.protocolversion, "protocolversion");
@@ -659,7 +674,7 @@ describe("ZcashClient - TxOut [strong]", () => {
     assert.strictEqual(result.success, true, "Should succeed");
 
     if (result.data) {
-      const txout = result.data as ZecTxOut;
+      const txout = result.data;
       assertHash(txout.bestblock, "bestblock");
       assertNumber(txout.value, "value");
       assertBoolean(txout.coinbase, "coinbase");
