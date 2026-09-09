@@ -176,6 +176,28 @@ describe("ClientFactory - bip122 namespace routing", () => {
   });
 });
 
+describe("ClientFactory - solana namespace routing", () => {
+  // Like bip122, the solana: namespace is matched on registry membership rather
+  // than the prefix, so an unregistered cluster is rejected instead of being
+  // handed a SolanaClient pointed at a chain the library does not know.
+  it("should route registered Solana chain IDs to SolanaClient", () => {
+    assert.ok(ClientFactory.createClient(SOLANA_MAINNET, TEST_CONFIG) instanceof SolanaClient);
+    assert.ok(ClientFactory.createClient(SOLANA_DEVNET, TEST_CONFIG) instanceof SolanaClient);
+  });
+
+  it("should throw for an unregistered solana chain ID", () => {
+    assert.throws(
+      () =>
+        ClientFactory.createClient(
+          "solana:ffffffffffffffffffffffffffffffff" as typeof SOLANA_MAINNET,
+          TEST_CONFIG,
+        ),
+      /Unsupported/,
+      "An unknown solana ID should be rejected rather than silently routed",
+    );
+  });
+});
+
 describe("ClientFactory - createTypedClient", () => {
   it("should create typed EthereumClient for chain ID 1", () => {
     const client = ClientFactory.createTypedClient(1, TEST_CONFIG);

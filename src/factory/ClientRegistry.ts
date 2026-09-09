@@ -179,9 +179,13 @@ function isBitcoinNetwork(network: SupportedNetwork): network is SupportedBitcoi
 
 /**
  * Check if a network identifier is a Solana CAIP-2 chain ID
+ *
+ * Matches on registry membership rather than the `solana:` prefix, for the same
+ * reason the Bitcoin and Zcash guards do: a CAIP-2 namespace is shared by every
+ * chain in a family, so a prefix test captures chains that are not registered here.
  */
 function isSolanaNetwork(network: SupportedNetwork): network is SupportedSolanaChainId {
-  return typeof network === "string" && network.startsWith("solana:");
+  return typeof network === "string" && network in SOLANA_REGISTRY;
 }
 
 /**
