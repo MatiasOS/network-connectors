@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert";
 import { ClientFactory } from "../../../src/factory/ClientRegistry.js";
 import { EthereumClient } from "../../../src/networks/1/EthereumClient.js";
+import { HardhatClient } from "../../../src/networks/31337/HardhatClient.js";
 import { OptimismClient } from "../../../src/networks/10/OptimismClient.js";
 import { BNBClient } from "../../../src/networks/56/BNBClient.js";
 import { PolygonClient } from "../../../src/networks/137/PolygonClient.js";
@@ -85,13 +86,12 @@ describe("ClientFactory - createClient", () => {
     assert.strictEqual(client.getStrategyName(), "fallback", "Should use fallback strategy");
   });
 
-  it("should create EthereumClient for chain ID 31337 (Hardhat)", () => {
+  it("should create HardhatClient for chain ID 31337 (Hardhat)", () => {
     const client = ClientFactory.createClient(31337, TEST_CONFIG);
 
-    assert.ok(
-      client instanceof EthereumClient,
-      "Should create EthereumClient instance for Hardhat",
-    );
+    // HardhatClient extends NetworkClient directly, not EthereumClient — it carries
+    // the hardhat_*/evm_* state-manipulation methods on top of the Ethereum surface.
+    assert.ok(client instanceof HardhatClient, "Should create HardhatClient instance for Hardhat");
     assert.strictEqual(client.getStrategyName(), "fallback", "Should use fallback strategy");
   });
 
@@ -316,7 +316,7 @@ describe("ClientFactory - All Networks Coverage", () => {
       { chainId: 8453 as const, clientClass: BaseClient, name: "Base" },
       { chainId: 42161 as const, clientClass: ArbitrumClient, name: "Arbitrum" },
       { chainId: 677868 as const, clientClass: AztecClient, name: "Aztec" },
-      { chainId: 31337 as const, clientClass: EthereumClient, name: "Hardhat" },
+      { chainId: 31337 as const, clientClass: HardhatClient, name: "Hardhat" },
       { chainId: 11155111 as const, clientClass: SepoliaClient, name: "Sepolia" },
     ];
 
