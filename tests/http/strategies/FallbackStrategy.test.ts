@@ -230,8 +230,8 @@ describe("FallbackStrategy - Metadata", () => {
     validateResponseDetails(result.metadata!.responses, false);
 
     // Verify successful response has data
-    assert.strictEqual(result.metadata!.responses[0].status, "success");
-    assert.ok(result.metadata!.responses[0].data !== undefined, "Should have data in response");
+    assert.strictEqual(result.metadata!.responses[0]?.status, "success");
+    assert.ok(result.metadata!.responses[0]?.data !== undefined, "Should have data in response");
   });
 
   it("should track all failed attempts before success in metadata", async () => {
@@ -248,8 +248,8 @@ describe("FallbackStrategy - Metadata", () => {
     validateResponseDetails(result.metadata!.responses, false);
 
     // Verify order: first failed, second succeeded
-    assert.strictEqual(result.metadata!.responses[0].status, "error");
-    assert.strictEqual(result.metadata!.responses[1].status, "success");
+    assert.strictEqual(result.metadata!.responses[0]?.status, "error");
+    assert.strictEqual(result.metadata!.responses[1]?.status, "success");
   });
 
   it("should return metadata on total failure", async () => {
@@ -297,11 +297,11 @@ describe("FallbackStrategy - Metadata", () => {
     validateResponseDetails(result.metadata!.responses, false);
 
     // First response should be from the invalid URL
-    assert.strictEqual(result.metadata!.responses[0].url, invalidUrl);
-    assert.strictEqual(result.metadata!.responses[0].status, "error");
+    assert.strictEqual(result.metadata!.responses[0]?.url, invalidUrl);
+    assert.strictEqual(result.metadata!.responses[0]?.status, "error");
 
     // Last response should be successful
     const lastResponse = result.metadata!.responses[result.metadata!.responses.length - 1];
-    assert.strictEqual(lastResponse.status, "success");
+    assert.strictEqual(lastResponse?.status, "success");
   });
 });

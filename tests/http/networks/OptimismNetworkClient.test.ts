@@ -1,7 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { OptimismClient } from "../../../src/networks/10/OptimismClient.ts";
-import type { StrategyConfig } from "../../../src/strategies/requestStrategy.ts";
+import { OptimismClient } from "../../../src/networks/10/OptimismClient.js";
+import type { StrategyConfig } from "../../../src/strategies/requestStrategy.js";
 import { isHexString, isAddress, validateObject } from "../../helpers/validators.js";
 import { getTestUrls } from "../../helpers/env.js";
 

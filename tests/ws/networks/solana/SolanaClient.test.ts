@@ -44,6 +44,7 @@ describe("SolanaClient (WebSocket) - Slot Subscription [strong]", () => {
       assert.ok(notifications.length > 0, "Should receive at least one slot notification");
 
       const notification = notifications[0];
+      assert.ok(notification, "Should have a first notification");
       assert.strictEqual(typeof notification.slot, "number", "slot should be a number");
       assert.strictEqual(typeof notification.parent, "number", "parent should be a number");
       assert.strictEqual(typeof notification.root, "number", "root should be a number");

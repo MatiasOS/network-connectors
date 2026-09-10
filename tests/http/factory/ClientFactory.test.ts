@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert";
 import { ClientFactory } from "../../../src/factory/ClientRegistry.js";
 import { EthereumClient } from "../../../src/networks/1/EthereumClient.js";
+import { HardhatClient } from "../../../src/networks/31337/HardhatClient.js";
 import { OptimismClient } from "../../../src/networks/10/OptimismClient.js";
 import { BNBClient } from "../../../src/networks/56/BNBClient.js";
 import { PolygonClient } from "../../../src/networks/137/PolygonClient.js";
@@ -10,6 +11,10 @@ import { ArbitrumClient } from "../../../src/networks/42161/ArbitrumClient.js";
 import { AztecClient } from "../../../src/networks/677868/AztecClient.js";
 import { SepoliaClient } from "../../../src/networks/11155111/SepoliaClient.js";
 import { SolanaClient } from "../../../src/networks/solana/SolanaClient.js";
+import { ZcashClient } from "../../../src/networks/zcash/ZcashClient.js";
+import { ZCASH_MAINNET, ZCASH_TESTNET } from "../../../src/networks/zcash/ZcashTypes.js";
+import { BitcoinClient } from "../../../src/networks/bitcoin/BitcoinClient.js";
+import { BITCOIN_MAINNET, BITCOIN_TESTNET3 } from "../../../src/networks/bitcoin/BitcoinTypes.js";
 import {
   SOLANA_MAINNET,
   SOLANA_DEVNET,
@@ -81,13 +86,12 @@ describe("ClientFactory - createClient", () => {
     assert.strictEqual(client.getStrategyName(), "fallback", "Should use fallback strategy");
   });
 
-  it("should create EthereumClient for chain ID 31337 (Hardhat)", () => {
+  it("should create HardhatClient for chain ID 31337 (Hardhat)", () => {
     const client = ClientFactory.createClient(31337, TEST_CONFIG);
 
-    assert.ok(
-      client instanceof EthereumClient,
-      "Should create EthereumClient instance for Hardhat",
-    );
+    // HardhatClient extends NetworkClient directly, not EthereumClient — it carries
+    // the hardhat_*/evm_* state-manipulation methods on top of the Ethereum surface.
+    assert.ok(client instanceof HardhatClient, "Should create HardhatClient instance for Hardhat");
     assert.strictEqual(client.getStrategyName(), "fallback", "Should use fallback strategy");
   });
 
@@ -117,6 +121,80 @@ describe("ClientFactory - createClient", () => {
 
     assert.ok(client instanceof SolanaClient, "Should create SolanaClient instance");
     assert.strictEqual(client.getStrategyName(), "fallback", "Should use fallback strategy");
+  });
+
+  it("should create ZcashClient for ZCASH_MAINNET", () => {
+    const client = ClientFactory.createClient(ZCASH_MAINNET, TEST_CONFIG);
+
+    assert.ok(client instanceof ZcashClient, "Should create ZcashClient instance");
+    assert.strictEqual(client.getStrategyName(), "fallback", "Should use fallback strategy");
+  });
+
+  it("should create ZcashClient for ZCASH_TESTNET", () => {
+    const client = ClientFactory.createClient(ZCASH_TESTNET, TEST_CONFIG);
+
+    assert.ok(client instanceof ZcashClient, "Should create ZcashClient instance");
+    assert.strictEqual(client.getStrategyName(), "fallback", "Should use fallback strategy");
+  });
+
+  it("should create BitcoinClient for BITCOIN_MAINNET", () => {
+    const client = ClientFactory.createClient(BITCOIN_MAINNET, TEST_CONFIG);
+
+    assert.ok(client instanceof BitcoinClient, "Should create BitcoinClient instance");
+    assert.strictEqual(client.getStrategyName(), "fallback", "Should use fallback strategy");
+  });
+});
+
+describe("ClientFactory - bip122 namespace routing", () => {
+  // Bitcoin and Zcash share the bip122: CAIP-2 namespace, so the factory must
+  // discriminate on registry membership rather than the namespace prefix.
+  it("should route Bitcoin and Zcash chain IDs to distinct clients", () => {
+    const bitcoin = ClientFactory.createClient(BITCOIN_MAINNET, TEST_CONFIG);
+    const zcash = ClientFactory.createClient(ZCASH_MAINNET, TEST_CONFIG);
+
+    assert.ok(bitcoin instanceof BitcoinClient, "Bitcoin ID should yield BitcoinClient");
+    assert.ok(zcash instanceof ZcashClient, "Zcash ID should yield ZcashClient");
+    assert.ok(!(bitcoin instanceof ZcashClient), "Bitcoin must not yield ZcashClient");
+    assert.ok(!(zcash instanceof BitcoinClient), "Zcash must not yield BitcoinClient");
+  });
+
+  it("should keep all bip122 testnet IDs routed to their own client", () => {
+    assert.ok(ClientFactory.createClient(BITCOIN_TESTNET3, TEST_CONFIG) instanceof BitcoinClient);
+    assert.ok(ClientFactory.createClient(ZCASH_TESTNET, TEST_CONFIG) instanceof ZcashClient);
+  });
+
+  it("should throw for an unregistered bip122 chain ID", () => {
+    assert.throws(
+      () =>
+        ClientFactory.createClient(
+          "bip122:ffffffffffffffffffffffffffffffff" as typeof ZCASH_MAINNET,
+          TEST_CONFIG,
+        ),
+      /Unsupported/,
+      "An unknown bip122 ID should be rejected rather than silently routed",
+    );
+  });
+});
+
+describe("ClientFactory - solana namespace routing", () => {
+  // Like bip122, the solana: namespace is matched on registry membership rather
+  // than the prefix, so an unregistered cluster is rejected instead of being
+  // handed a SolanaClient pointed at a chain the library does not know.
+  it("should route registered Solana chain IDs to SolanaClient", () => {
+    assert.ok(ClientFactory.createClient(SOLANA_MAINNET, TEST_CONFIG) instanceof SolanaClient);
+    assert.ok(ClientFactory.createClient(SOLANA_DEVNET, TEST_CONFIG) instanceof SolanaClient);
+  });
+
+  it("should throw for an unregistered solana chain ID", () => {
+    assert.throws(
+      () =>
+        ClientFactory.createClient(
+          "solana:ffffffffffffffffffffffffffffffff" as typeof SOLANA_MAINNET,
+          TEST_CONFIG,
+        ),
+      /Unsupported/,
+      "An unknown solana ID should be rejected rather than silently routed",
+    );
   });
 });
 
@@ -175,6 +253,19 @@ describe("ClientFactory - createTypedClient", () => {
 
     assert.ok(client instanceof SepoliaClient, "Should create SepoliaClient instance");
     assert.strictEqual(client.getStrategyName(), "fallback", "Should use fallback strategy");
+  });
+
+  it("should create typed ZcashClient for ZCASH_MAINNET", () => {
+    const client = ClientFactory.createTypedClient(ZCASH_MAINNET, TEST_CONFIG);
+
+    assert.ok(client instanceof ZcashClient, "Should create ZcashClient instance");
+    // TypeScript should infer client as ZcashClient
+  });
+
+  it("should create typed BitcoinClient for BITCOIN_MAINNET", () => {
+    const client = ClientFactory.createTypedClient(BITCOIN_MAINNET, TEST_CONFIG);
+
+    assert.ok(client instanceof BitcoinClient, "Should create BitcoinClient instance");
   });
 
   it("should create typed SolanaClient for SOLANA_DEVNET", () => {
@@ -247,7 +338,7 @@ describe("ClientFactory - All Networks Coverage", () => {
       { chainId: 8453 as const, clientClass: BaseClient, name: "Base" },
       { chainId: 42161 as const, clientClass: ArbitrumClient, name: "Arbitrum" },
       { chainId: 677868 as const, clientClass: AztecClient, name: "Aztec" },
-      { chainId: 31337 as const, clientClass: EthereumClient, name: "Hardhat" },
+      { chainId: 31337 as const, clientClass: HardhatClient, name: "Hardhat" },
       { chainId: 11155111 as const, clientClass: SepoliaClient, name: "Sepolia" },
     ];
 

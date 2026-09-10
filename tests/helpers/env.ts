@@ -1,11 +1,27 @@
 import dotenvFlow from "dotenv-flow";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import type { RpcEndpoint } from "../../src/strategies/requestStrategy.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenvFlow.config({ path: resolve(__dirname, "../..") });
 
-const ALCHEMY_API_KEY = process.env.ALCHEMY_API_KEY;
+/**
+ * Read an environment variable, treating an unfilled `.env.example` placeholder
+ * as unset.
+ *
+ * `.env.example` ships values of the form `<alchemy_api_key>`. Copying it to
+ * `.env` — the usual way to get started — would otherwise leave every key
+ * "configured" with a literal placeholder: gated tests un-skip and then fail on
+ * a 401, and placeholder URLs get spliced into RPC fallback lists.
+ */
+function readEnv(name: string): string | undefined {
+  const value = process.env[name]?.trim();
+  if (!value || (value.startsWith("<") && value.endsWith(">"))) return undefined;
+  return value;
+}
+
+const ALCHEMY_API_KEY = readEnv("ALCHEMY_API_KEY");
 
 const ALCHEMY_NETWORKS: Record<string, string> = {
   "eth-mainnet": "eth-mainnet",
@@ -21,16 +37,73 @@ const ALCHEMY_NETWORKS: Record<string, string> = {
   "solana-devnet": "solana-devnet",
 };
 
-export function getTestUrls(network: string, baseUrls: string[]): string[] {
+/**
+ * A list guaranteed to hold at least one entry.
+ *
+ * Test suites index these lists directly (`URLS[0]`) to build single-transport
+ * clients. Typing them as non-empty keeps that honest under
+ * `noUncheckedIndexedAccess` without sprinkling non-null assertions through
+ * every test file.
+ */
+export type NonEmpty<T> = [T, ...T[]];
+
+export function getTestUrls(network: string, baseUrls: NonEmpty<string>): NonEmpty<string> {
   if (!ALCHEMY_API_KEY) return baseUrls;
   const subdomain = ALCHEMY_NETWORKS[network];
   if (!subdomain) return baseUrls;
   return [...baseUrls, `https://${subdomain}.g.alchemy.com/v2/${ALCHEMY_API_KEY}`];
 }
 
-export function getTestWsUrls(network: string, baseUrls: string[]): string[] {
+export function getTestWsUrls(network: string, baseUrls: NonEmpty<string>): NonEmpty<string> {
   if (!ALCHEMY_API_KEY) return baseUrls;
   const subdomain = ALCHEMY_NETWORKS[network];
   if (!subdomain) return baseUrls;
   return [...baseUrls, `wss://${subdomain}.g.alchemy.com/v2/${ALCHEMY_API_KEY}`];
 }
+
+const TATUM_API_KEY = readEnv("TATUM_API_KEY");
+const ZCASH_RPC_URL = readEnv("ZCASH_RPC_URL");
+
+/**
+ * Whether a Tatum API key is configured.
+ *
+ * Without one, the Tatum gateway serves anonymous traffic capped at 5 requests
+ * per minute (shared across all its hosts), and whitelists only a subset of RPC
+ * methods. Tests that would exceed that budget should be skipped when this is false.
+ */
+export const hasTatumApiKey = Boolean(TATUM_API_KEY);
+
+/**
+ * Attach the Tatum API key to a gateway URL, if one is configured.
+ *
+ * Tatum authenticates via the `x-api-key` header — a key embedded in the URL path
+ * is silently ignored — so this returns an RpcEndpoint rather than a string when
+ * a key is present. Headers are scoped per endpoint, so the key is never sent to
+ * other providers in the same RPC URL list.
+ */
+export function withTatumKey(url: string): string | RpcEndpoint {
+  if (!TATUM_API_KEY) return url;
+  return { url, headers: { "x-api-key": TATUM_API_KEY } };
+}
+
+/**
+ * Zcash RPC endpoints for tests.
+ *
+ * Defaults to the public Tatum gateways (the only free no-key Zcash JSON-RPC
+ * available). Setting ZCASH_RPC_URL prepends a self-hosted zebrad or another
+ * provider, which takes priority under the fallback strategy.
+ */
+export function getZcashTestEndpoints(baseUrls: NonEmpty<string>): NonEmpty<string | RpcEndpoint> {
+  const [first, ...rest] = baseUrls;
+  const endpoints: NonEmpty<string | RpcEndpoint> = [
+    withTatumKey(first),
+    ...rest.map(withTatumKey),
+  ];
+  return ZCASH_RPC_URL ? [ZCASH_RPC_URL, ...endpoints] : endpoints;
+}
+
+/**
+ * Whether a non-Tatum Zcash node is configured, which lifts both the rate limit
+ * and the gateway's method whitelist.
+ */
+export const hasZcashNodeUrl = Boolean(ZCASH_RPC_URL);

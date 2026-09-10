@@ -1,0 +1,34 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: main
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - run: npm ci
+      - run: npm run check
+      - run: npm run typecheck
+      - run: npm run build
+
+  test:
+    runs-on: ubuntu-latest
+    # Every test in this suite makes real RPC calls against live public endpoints
+    # (the project deliberately does not mock them), so a red run here can mean a
+    # provider is down or rate-limiting rather than a defect. Kept off the required
+    # gate for that reason — `quality` above is the blocking job.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+      - run: npm ci
+      - run: npm run test:http

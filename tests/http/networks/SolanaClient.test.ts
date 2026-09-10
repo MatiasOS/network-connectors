@@ -158,6 +158,7 @@ describe("SolanaClient (HTTP) - Basic Methods [strong]", () => {
     assert.ok(Array.isArray(result.data), "Should return an array");
     assert.ok((result.data as unknown[]).length > 0, "Should have at least one node");
     const node = (result.data as { pubkey: string }[])[0];
+    assert.ok(node, "Should have a first node");
     assert.strictEqual(typeof node.pubkey, "string", "Node pubkey should be a string");
   });
 
@@ -188,7 +189,7 @@ describe("SolanaClient (HTTP) - Block Methods [strong]", () => {
 
     assert.strictEqual(result.success, true, "Should succeed");
     // Block can be null for skipped slots
-    if (result.data !== null) {
+    if (result.data) {
       assert.strictEqual(typeof result.data.blockhash, "string", "blockhash should be a string");
       assert.strictEqual(typeof result.data.parentSlot, "number", "parentSlot should be a number");
       assert.strictEqual(
@@ -223,6 +224,7 @@ describe("SolanaClient (HTTP) - Transaction Methods [strong]", () => {
     assert.ok(Array.isArray(result.data), "Should return an array");
     if ((result.data as unknown[]).length > 0) {
       const fee = (result.data as { slot: number; prioritizationFee: number }[])[0];
+      assert.ok(fee, "Should have a first fee sample");
       assert.strictEqual(typeof fee.slot, "number", "slot should be a number");
       assert.strictEqual(
         typeof fee.prioritizationFee,

@@ -34,7 +34,7 @@ export class ParallelStrategy implements RequestStrategy {
           firstSuccessData = data;
         }
         const responseTime = Date.now() - startTime;
-        const hash = this.hashResponse(data as object);
+        const hash = this.hashResponse(data);
 
         return {
           url: rpcClient.getUrl(),
@@ -106,12 +106,40 @@ export class ParallelStrategy implements RequestStrategy {
   }
 
   /**
+   * Recursively sort object keys so two providers that serialize the same data in a
+   * different key order still produce the same string.
+   *
+   * Arrays keep their order — element order is meaningful in RPC responses (a block's
+   * transaction list, a log array), so reordering one is a genuine inconsistency.
+   */
+  // biome-ignore lint/suspicious/noExplicitAny: <TODO>
+  private canonicalize(value: any): any {
+    if (Array.isArray(value)) {
+      return value.map((entry) => this.canonicalize(entry));
+    }
+    if (value !== null && typeof value === "object") {
+      const sorted: Record<string, unknown> = {};
+      for (const key of Object.keys(value).sort()) {
+        sorted[key] = this.canonicalize(value[key]);
+      }
+      return sorted;
+    }
+    return value;
+  }
+
+  /**
    * Generate a hash of the response for comparison
    * Uses a simple string-based hash for browser compatibility
+   *
+   * Note the response must be canonicalized first. Passing the top-level keys to
+   * JSON.stringify as a replacer looks like a key sort but is an allowlist applied at
+   * every depth, which blanks out every nested object and makes divergence below the
+   * top level invisible.
    */
-  private hashResponse(data: object): string {
+  // biome-ignore lint/suspicious/noExplicitAny: <TODO>
+  private hashResponse(data: any): string {
     try {
-      const normalized = JSON.stringify(data, Object.keys(data).sort());
+      const normalized = JSON.stringify(this.canonicalize(data));
       // Simple hash function for comparison (not cryptographic)
       let hash = 0;
       for (let i = 0; i < normalized.length; i++) {

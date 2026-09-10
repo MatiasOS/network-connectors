@@ -1033,11 +1033,11 @@ describe("BitcoinClient - Explorer Mempool Methods", () => {
     assert.ok(result.data, "Should have data");
     assert.strictEqual(typeof result.data, "object", "Should return object");
     // If mempool has entries, validate structure
-    const txids = Object.keys(result.data);
-    if (txids.length > 0) {
-      const entry = result.data[txids[0]];
+    const [firstTxid] = Object.keys(result.data);
+    if (firstTxid) {
+      const entry = result.data[firstTxid];
+      assert.ok(entry, "Listed txid should resolve to a mempool entry");
       validateBtcMempoolEntry(entry);
-    } else {
     }
   });
 
